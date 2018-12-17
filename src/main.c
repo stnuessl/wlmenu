@@ -54,7 +54,7 @@ static void match(const char *str, struct item *list, size_t size)
     for (size_t i = 0; i < size; ++i) {
         int diff = (unsigned int) len - list[i].hits;
 
-        if ((diff == 1 || diff == -1) && strstr(list[i].name, str))
+        if (abs(diff) == 1 && strstr(list[i].name, str))
             list[i].hits = (unsigned int) len;
     }
 }
