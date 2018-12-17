@@ -267,6 +267,7 @@ cache_write(const char *cache, const char *path, struct item *list, size_t size)
 
 static size_t do_load(const char *path, const char *cache, struct item **list)
 {
+    size_t n = 0, n_max = 4096;
     char *iter;
     ssize_t size;
 
