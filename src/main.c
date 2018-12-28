@@ -26,13 +26,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <errno.h>
+#include <unistd.h>
+#include <ctype.h>
 
-#include <wayland-client.h>
-
+#include "win.h"
 #include "load.h"
 #include "proc-util.h"
 
-static struct wl_display *display = NULL;
+static struct win win;
 static struct item *list;
 static size_t size;
 
@@ -59,59 +63,76 @@ static void match(const char *str, struct item *list, size_t size)
     }
 }
 
+
+
+
+#if 0
+static int make_directories(const char *path, mode_t mode)
+{
+
+    char *dup = strdupa(path);
+    
+    for (char *p = dup; *p != '\0'; ++p) {
+        if (*p == '/') {
+            int err;
+
+            *p = '\0';
+
+            err = mkdir(dup, mode);
+            if (err < 0 && errno != EEXIST)
+                return -errno;
+
+            *p = '/';
+
+            while (*p != 0 && *p++ == '/')
+                ;
+        }
+    }
+
+    return 0;
+}
+#endif
+
+#if 0
+void main_win_draw(void *arg)
+{
+    printf("Drawing!\n");
+
+    struct window *win = arg;
+    cairo_t *cr = window_cairo(win);
+    
+    cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, .5);
+    cairo_rectangle(cr, 0, 0, 200, 200);
+    cairo_fill(cr);
+//    cairo_paint(cr);
+}
+#endif
+
 int main(int argc, char *argv[])
 {
     pthread_t thread;
     int err;
 
+    (void) argc;
+    (void) argv;
+    (void) &match;
+
     err = pthread_create(&thread, NULL, &thr_load, NULL);
     if (err < 0)
-        die("Failed to load applications\n");
+        die("Failed to load applications.\n");
+
+    win_init(&win, NULL);
+    win_set_title(&win, "wlmenu");
+    win_show(&win);
 
     (void) pthread_join(thread, NULL);
-#if 0
-    match("f", list, size);
-    match("fi", list, size);
-    match("fir", list, size);
-    match("fire", list, size);
-    match("fir", list, size);
-    match("fire", list, size); 
-    match("fir", list, size);
-    match("fi", list, size);
-    match("f", list, size);
-    match("", list, size);
-    match("m", list, size);
-    match("mu", list, size);
-    match("mup", list, size);
+  
+    printf("Entering dispatch mode\n");
 
-    for (size_t i = 0; i < size; ++i) {
-        if (list[i].hits == 3)
-            printf("%s: %u\n", list[i].name, list[i].hits);
-    }
-#endif
-#if 0
-    for (size_t i = 0; i < size; ++i) {
-        printf ("%s\n", list[i].name);
-    }
+    win_mainloop(&win);
 
-#endif
-
-#if 0    
-    for (size_t i = 0; i < size; ++i) {
-        printf("%s\n", list[i].name);
-    }
-
-    printf("\nsize = %lu\n\n", size);
-
-// #if 0
-    display = wl_display_connect(NULL);
-    if (display == NULL) {
-    	fprintf(stderr, "Can't connect to display\n");
-	    exit(1);
-    }
-    printf("connected to display\n");
-
-    wl_display_disconnect(display);
-#endif
+    win_destroy(&win);
     fprintf(stdout, "Goodbye!\n");
+
+    return EXIT_SUCCESS;
 }

@@ -62,7 +62,7 @@ static void merge(struct item *dst,
 static void sort(struct item *list, size_t size)
 {
     struct item *buf = malloc(size * sizeof(*buf));
-    struct item item = {NULL, 0};
+    struct item item = { NULL, 0 };
     size_t n = 16;
 
     if (!buf)

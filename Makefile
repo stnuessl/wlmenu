@@ -132,6 +132,8 @@ INCLUDE		:= \
 #
 PKGCONF		:= \
 		wayland-client										\
+        cairo                                               \
+        xkbcommon                                           \
 # 		gstreamer-1.0										\
 # 		gstreamer-pbutils-1.0								\
 # 		libcurl												\

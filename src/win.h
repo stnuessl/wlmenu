@@ -22,12 +22,63 @@
  * SOFTWARE.
  */
 
-#ifndef PROC_UTIL_H_
-#define PROC_UTIL_H_
+#ifndef WIN_H_
+#define WIN_H_
 
-void die(const char *fmt, ...) __attribute__((noreturn, format(printf, 1, 2)));
+#include <wayland-client.h>
+#include <cairo.h>
 
-void die_error(int err, const char *fmt, ...) 
-__attribute__((noreturn, format(printf, 2, 3)));
+#include "xkb.h"
 
-#endif /* PROC_UTIL_H_ */
+struct win {
+    struct xkb xkb;
+
+    struct wl_display *display;
+    struct wl_compositor *compositor;
+    struct wl_subcompositor *subcompositor;
+    struct wl_shell *shell;
+    struct wl_shm *shm;
+    struct wl_seat *seat;
+    struct wl_output *output;
+    struct wl_surface *surface;
+    struct wl_shell_surface *shell_surface;
+    struct wl_buffer *buffer;
+
+    cairo_t *cairo;
+    
+    void *mem;
+    size_t size;
+
+    int32_t width;
+    int32_t height;
+    int32_t stride;
+
+    uint32_t serial;
+
+    char input[32];
+    size_t curser;
+    int last_key;
+
+    int32_t delay;
+    int32_t rate;
+
+    int fd_timer;
+    int fd_epoll;
+
+    uint8_t dirty : 1;
+    uint8_t quit : 1;
+};
+
+void win_init(struct win *w, const char *display_name);
+
+void win_destroy(struct win *w);
+
+void win_set_title(struct win *w, const char *title);
+
+void win_set_class(struct win *w, const char *name);
+
+void win_show(struct win *w);
+
+void win_mainloop(struct win *w);
+
+#endif /* WIN_H_ */

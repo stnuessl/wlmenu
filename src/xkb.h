@@ -22,12 +22,34 @@
  * SOFTWARE.
  */
 
-#ifndef PROC_UTIL_H_
-#define PROC_UTIL_H_
+#ifndef XKB_H_
+#define XKB_H_
 
-void die(const char *fmt, ...) __attribute__((noreturn, format(printf, 1, 2)));
+#include <stdbool.h>
 
-void die_error(int err, const char *fmt, ...) 
-__attribute__((noreturn, format(printf, 2, 3)));
+#include <xkbcommon/xkbcommon.h>
 
-#endif /* PROC_UTIL_H_ */
+struct xkb {
+    struct xkb_keymap *keymap;
+    struct xkb_state *state;
+    struct xkb_context *context;
+};
+
+void xkb_init(struct xkb *xkb);
+
+void xkb_destroy(struct xkb *xkb);
+
+bool xkb_keymap_ok(const struct xkb *xkb);
+
+bool xkb_set_keymap(struct xkb *xkb, const char *desc);
+
+xkb_keysym_t xkb_get_sym(struct xkb *xkb, uint32_t key);
+
+void xkb_state_update(struct xkb *xkb, 
+                      uint32_t mods_depressed, 
+                      uint32_t mods_latched,
+                      uint32_t mods_locked,
+                      uint32_t group);
+
+#endif /* XKB_H_ */
+

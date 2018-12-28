@@ -23,6 +23,7 @@
  */
 
 #include <stdarg.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -40,4 +41,24 @@ void die(const char *fmt, ...)
     va_end(args);
 
     exit(EXIT_FAILURE);
+}
+
+void die_error(int err, const char *fmt, ...) 
+{
+    va_list args;
+
+    va_start(args, fmt);
+
+    fprintf(stderr, "wlmenu: ");
+    vfprintf(stderr, fmt, args);
+
+    va_end(args);
+
+    if (err != 0) {
+        char *msg;
+        
+        msg = strerror_r(err, NULL, 0);
+        if (msg)
+            fprintf(stderr, " - %s\n", msg);
+    }
 }
