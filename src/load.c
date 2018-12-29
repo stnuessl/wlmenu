@@ -62,11 +62,11 @@ static void merge(struct item *dst,
 static void sort(struct item *list, size_t size)
 {
     struct item *buf = malloc(size * sizeof(*buf));
-    struct item item = { NULL, 0 };
+    struct item item = {NULL, 0};
     size_t n = 16;
 
     if (!buf)
-        die("Out of memory!\n");
+        die("Out of memory\n");
 
     /* Sort small batches of size 'n' with insertion sort */
 
@@ -277,7 +277,7 @@ static size_t do_load(const char *path, const char *cache, struct item **list)
 
     *list = malloc(n_max * sizeof(**list));
     if (!list)
-        die("Out of memory!\n");
+        die("Out of memory\n");
 
     iter = strdupa(path);
     while (iter) {
@@ -310,14 +310,14 @@ static size_t do_load(const char *path, const char *cache, struct item **list)
 
                 *list = realloc(*list, n_max * sizeof(**list));
                 if (!*list)
-                    die("Out of memory!\n");
+                    die("Out of memory\n");
             }
 
             (*list)[n].hits = 0;
             (*list)[n].name = strdup(entry->d_name);
 
             if (!(*list)[n].name)
-                die("Out of memory!\n");
+                die("Out of memory\n");
 
             ++n;
         }

@@ -22,33 +22,42 @@
  * SOFTWARE.
  */
 
-#ifndef XKB_H_
-#define XKB_H_
+#ifndef FRAMEBUFFER_H_
+#define FRAMEBUFFER_H_
 
-#include <stdbool.h>
+#include <stdint.h>
 
-#include <xkbcommon/xkbcommon.h>
+#include <cairo.h>
 
-struct xkb {
-    struct xkb_keymap *keymap;
-    struct xkb_state *state;
-    struct xkb_context *context;
+struct framebuffer {
+    cairo_t *cairo;
+
+    void *mem;
+    size_t size;
+
+    int32_t width;
+    int32_t height;
+    int32_t stride;
 };
 
-void xkb_init(struct xkb *xkb);
+void framebuffer_init(struct framebuffer *fb);
 
-void xkb_destroy(struct xkb *xkb);
+void framebuffer_destroy(struct framebuffer *fb);
 
-bool xkb_keymap_ok(const struct xkb *xkb);
+int framebuffer_configure(struct framebuffer *fb,
+                          int fd,
+                          int32_t width,
+                          int32_t height,
+                          cairo_format_t format);
 
-bool xkb_set_keymap(struct xkb *xkb, const char *desc);
+cairo_t *framebuffer_cairo(struct framebuffer *fb);
 
-xkb_keysym_t xkb_get_sym(struct xkb *xkb, uint32_t key);
+size_t framebuffer_size(const struct framebuffer *fb);
 
-void xkb_state_update(struct xkb *xkb,
-                      uint32_t mods_depressed,
-                      uint32_t mods_latched,
-                      uint32_t mods_locked,
-                      uint32_t group);
+int32_t framebuffer_width(const struct framebuffer *fb);
 
-#endif /* XKB_H_ */
+int32_t framebuffer_height(const struct framebuffer *fb);
+
+int32_t framebuffer_stride(const struct framebuffer *fb);
+
+#endif /* FRAMEBUFFER_H_ */

@@ -35,7 +35,7 @@ void xkb_destroy(struct xkb *xkb)
 {
     if (xkb->context)
         xkb_context_unref(xkb->context);
-    
+
     if (xkb->keymap)
         xkb_keymap_unref(xkb->keymap);
 
@@ -49,7 +49,7 @@ bool xkb_keymap_ok(const struct xkb *xkb)
 }
 
 bool xkb_set_keymap(struct xkb *xkb, const char *desc)
-{  
+{
     struct xkb_context *context;
     struct xkb_keymap *keymap;
     struct xkb_state *state;
@@ -58,10 +58,8 @@ bool xkb_set_keymap(struct xkb *xkb, const char *desc)
     if (!context)
         goto fail0;
 
-    keymap = xkb_keymap_new_from_string(context,
-                                        desc,
-                                        XKB_KEYMAP_FORMAT_TEXT_V1,
-                                        XKB_KEYMAP_COMPILE_NO_FLAGS);
+    keymap = xkb_keymap_new_from_string(
+        context, desc, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
     if (!keymap)
         goto fail1;
 
@@ -71,7 +69,7 @@ bool xkb_set_keymap(struct xkb *xkb, const char *desc)
 
     if (xkb->context)
         xkb_context_unref(xkb->context);
-    
+
     if (xkb->keymap)
         xkb_keymap_unref(xkb->keymap);
 
@@ -89,7 +87,7 @@ fail2:
 fail1:
     xkb_context_unref(context);
 fail0:
-    return false; 
+    return false;
 }
 
 xkb_keysym_t xkb_get_sym(struct xkb *xkb, uint32_t key)
@@ -97,18 +95,12 @@ xkb_keysym_t xkb_get_sym(struct xkb *xkb, uint32_t key)
     return xkb_state_key_get_one_sym(xkb->state, key + 8);
 }
 
-void xkb_state_update(struct xkb *xkb, 
-                      uint32_t mods_depressed, 
+void xkb_state_update(struct xkb *xkb,
+                      uint32_t mods_depressed,
                       uint32_t mods_latched,
                       uint32_t mods_locked,
                       uint32_t group)
 {
-    (void) xkb_state_update_mask(xkb->state, 
-                                 mods_depressed,
-                                 mods_latched,
-                                 mods_locked,
-                                 0u, 
-                                 0u, 
-                                 group);
+    (void) xkb_state_update_mask(xkb->state, mods_depressed, mods_latched,
+                                 mods_locked, 0u, 0u, group);
 }
-

@@ -23,9 +23,9 @@
  */
 
 #include <stdarg.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "proc-util.h"
 
@@ -43,7 +43,7 @@ void die(const char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
-void die_error(int err, const char *fmt, ...) 
+void die_error(int err, const char *fmt, ...)
 {
     va_list args;
 
@@ -55,10 +55,12 @@ void die_error(int err, const char *fmt, ...)
     va_end(args);
 
     if (err != 0) {
-        char *msg;
-        
-        msg = strerror_r(err, NULL, 0);
-        if (msg)
-            fprintf(stderr, " - %s\n", msg);
+        char buf[128];
+
+        fprintf(stderr, " - %s", strerror_r(err, buf, sizeof(buf)));
     }
+
+    fprintf(stderr, "\n");
+
+    exit(EXIT_FAILURE);
 }

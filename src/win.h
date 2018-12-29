@@ -26,8 +26,9 @@
 #define WIN_H_
 
 #include <wayland-client.h>
-#include <cairo.h>
 
+#include "framebuffer.h"
+#include "textbox.h"
 #include "xkb.h"
 
 struct win {
@@ -44,26 +45,17 @@ struct win {
     struct wl_shell_surface *shell_surface;
     struct wl_buffer *buffer;
 
-    cairo_t *cairo;
-    
-    void *mem;
-    size_t size;
-
-    int32_t width;
-    int32_t height;
-    int32_t stride;
+    struct framebuffer framebuffer;
+    struct textbox textbox;
 
     uint32_t serial;
 
-    char input[32];
-    size_t curser;
-    int last_key;
-
-    int32_t delay;
     int32_t rate;
+    int32_t delay;
+    xkb_keysym_t symbol;
 
-    int fd_timer;
     int fd_epoll;
+    int fd_timer;
 
     uint8_t dirty : 1;
     uint8_t quit : 1;

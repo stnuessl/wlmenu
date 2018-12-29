@@ -22,14 +22,14 @@
  * SOFTWARE.
  */
 
-#include <string.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <time.h>
-#include <sys/mman.h>
-#include <sys/epoll.h>
-#include <sys/timerfd.h>
 #include <errno.h>
+#include <linux/memfd.h>
+#include <string.h>
+#include <sys/epoll.h>
+#include <sys/mman.h>
+#include <sys/timerfd.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "win.h"
 
@@ -38,54 +38,51 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 
 static void win_draw_background(struct win *w)
-{   
+{
+    cairo_t *cairo = framebuffer_cairo(&w->framebuffer);
     int32_t width = 400;
     int32_t height = 200;
-    int32_t x = (w->width - width) / 2;
-    int32_t y = (w->height - height) / 2;
+    int32_t x = (framebuffer_width(&w->framebuffer) - width) / 2;
+    int32_t y = (framebuffer_height(&w->framebuffer) - height) / 2;
     double val = 40.0 / 255.0;
 
-    cairo_set_source_rgba(w->cairo, val, val, val, 1.0);
-    cairo_rectangle(w->cairo, x, y, width, height);
-    cairo_fill(w->cairo);
+    cairo_set_source_rgba(cairo, val, val, val, 1.0);
+    cairo_rectangle(cairo, x, y, width, height);
+    cairo_fill(cairo);
 
-    cairo_set_source_rgba(w->cairo, 1.0, 0.0, 0.0, 1.0);
-    cairo_set_line_width(w->cairo, 10.0);
-    cairo_rectangle(w->cairo, x, y, width, height);
-    cairo_stroke(w->cairo);
-    
+    cairo_set_source_rgba(cairo, 1.0, 0.0, 0.0, 1.0);
+    cairo_set_line_width(cairo, 10.0);
+    cairo_rectangle(cairo, x, y, width, height);
+    cairo_stroke(cairo);
+
     wl_surface_damage_buffer(w->surface, x, y, width, height);
 }
 
 static void win_draw_text(struct win *w)
 {
+    cairo_t *cairo = framebuffer_cairo(&w->framebuffer);
     int32_t width = 400;
     int32_t height = 200;
-    int32_t x = (w->width - width) / 2;
-    int32_t y = (w->height - height) / 2;
+    int32_t x = (framebuffer_width(&w->framebuffer) - width) / 2;
+    int32_t y = (framebuffer_height(&w->framebuffer) - height) / 2;
 
-    cairo_select_font_face(w->cairo,
-                           "Hack",
-                           CAIRO_FONT_SLANT_NORMAL,
+    cairo_select_font_face(cairo, "Hack", CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(w->cairo, 16.0);
-    cairo_set_source_rgba(w->cairo, 0.0, 255.0, 0.0, 1.0);
-    cairo_move_to(w->cairo, x + 20.0, y + 20.0);
-    cairo_show_text(w->cairo, w->input);
+    cairo_set_font_size(cairo, 16.0);
+    cairo_set_source_rgba(cairo, 0.0, 255.0, 0.0, 1.0);
+    cairo_move_to(cairo, x + 20.0, y + 20.0);
+    cairo_show_text(cairo, textbox_str(&w->textbox));
 
     wl_surface_damage_buffer(w->surface, x, y, width, height);
 }
 
 static void win_draw(struct win *w)
 {
-    if (!w->cairo)
-        return;
-
     if (!w->buffer) {
         w->dirty = true;
         return;
     }
-    
+
     win_draw_background(w);
     win_draw_text(w);
 
@@ -98,7 +95,7 @@ static void win_draw(struct win *w)
 static void buffer_release(void *data, struct wl_buffer *buffer)
 {
     struct win *w = data;
-    
+
     w->buffer = buffer;
     printf("Buffer released!\n");
 
@@ -112,9 +109,8 @@ static const struct wl_buffer_listener buffer_listener = {
     .release = &buffer_release,
 };
 
-static void surface_enter(void *data, 
-                          struct wl_surface *surface,
-                          struct wl_output *output)
+static void
+surface_enter(void *data, struct wl_surface *surface, struct wl_output *output)
 {
     struct win *w = data;
 
@@ -123,12 +119,11 @@ static void surface_enter(void *data,
     (void) output;
 }
 
-static void surface_leave(void *data, 
-                          struct wl_surface *surface, 
-                          struct wl_output *output)
+static void
+surface_leave(void *data, struct wl_surface *surface, struct wl_output *output)
 {
     struct win *w = data;
-   
+
     (void) w;
     (void) surface;
     (void) output;
@@ -139,12 +134,12 @@ static const struct wl_surface_listener surface_listener = {
     .leave = &surface_leave,
 };
 
-static void shell_surface_ping(void *data, 
+static void shell_surface_ping(void *data,
                                struct wl_shell_surface *shell_surface,
                                uint32_t serial)
 {
     struct win *w = data;
-    
+
     w->serial = serial;
 
     wl_shell_surface_pong(shell_surface, serial);
@@ -152,84 +147,52 @@ static void shell_surface_ping(void *data,
 
 static void shell_surface_configure(void *data,
                                     struct wl_shell_surface *shell_surface,
-                                    uint32_t edges, 
-                                    int32_t width, 
+                                    uint32_t edges,
+                                    int32_t width,
                                     int32_t height)
 {
     struct win *w = data;
     struct wl_shm_pool *pool;
-    cairo_surface_t *cr_surf;
+    int32_t fb_width, fb_height;
     int fd, err;
-  
+
     (void) shell_surface;
     (void) edges;
 
-    if (w->width == width && w->height == height)
+    fb_width = framebuffer_width(&w->framebuffer);
+    fb_height = framebuffer_height(&w->framebuffer);
+
+    if (fb_width == width && fb_height == height)
         return;
 
     if (width < 0 || height < 0)
-        die("Invalid window configuration parameters.\n");
+        die("Invalid window configuration parameters\n");
 
-    w->stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
-    if (w->stride < 0)
-        die("Invalid memory buffer configuration.\n");
-
-    /* Destroy old elements from a previous 'shell_surface_configure()' call */
-    if (w->cairo)
-        cairo_destroy(w->cairo);
-    
     if (w->buffer)
         wl_buffer_destroy(w->buffer);
-    
-    if (w->mem)
-        munmap(w->mem, w->size);
-
-    w->size = w->stride * height;
-    w->width = width;
-    w->height = height;
 
     fd = memfd_create("wlmenu-shm", MFD_CLOEXEC);
     if (fd < 0)
-        die("Failed to create shared memory.\n");
-    
-    err = ftruncate(fd, w->size);
+        die_error(errno, "Failed to create shared memory region");
+
+    err = framebuffer_configure(&w->framebuffer, fd, width, height,
+                                CAIRO_FORMAT_ARGB32);
     if (err < 0)
-        die("Failed to allocate shared memory.\n");
-    
-    w->mem = mmap(NULL, w->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (w->mem == MAP_FAILED)
-        die("Failed to map shared memory for drawing.\n");
+        die_error(-err, "Failed to configure framebuffer");
 
-    pool = wl_shm_create_pool(w->shm, fd, w->size);
+    pool = wl_shm_create_pool(w->shm, fd, framebuffer_size(&w->framebuffer));
     if (!pool)
-        die("Failed to create shared memory pool.\n");
-    
-    w->buffer = wl_shm_pool_create_buffer(pool,
-                                          0, 
-                                          w->width, 
-                                          w->height, 
-                                          w->stride, 
-                                          WL_SHM_FORMAT_ARGB8888);
-    if (!w->buffer) 
-        die("Failed to create shared window buffer - no rendering possible.\n");
+        die("Failed to share framebuffer with display manager\n");
 
-
-    cr_surf = cairo_image_surface_create_for_data(w->mem,
-                                                  CAIRO_FORMAT_ARGB32,
-                                                  w->width,
-                                                  w->height,
-                                                  w->stride);
-
-    if (cairo_surface_status(cr_surf) != CAIRO_STATUS_SUCCESS)
-        die("Failed to configure surface for window drawing operations.\n");
-
-    w->cairo = cairo_create(cr_surf);
-    if (cairo_status(w->cairo) != CAIRO_STATUS_SUCCESS)
-        die("Failed to initialize window rendering operations.\n");
+    w->buffer = wl_shm_pool_create_buffer(
+        pool, 0, framebuffer_width(&w->framebuffer),
+        framebuffer_height(&w->framebuffer),
+        framebuffer_stride(&w->framebuffer), WL_SHM_FORMAT_ARGB8888);
+    if (!w->buffer)
+        die("Failed to create buffer for window surface\n");
 
     wl_buffer_add_listener(w->buffer, &buffer_listener, w);
-    
-    cairo_surface_destroy(cr_surf);
+
     wl_shm_pool_destroy(pool);
     close(fd);
 
@@ -246,20 +209,20 @@ static void shell_surface_popup_done(void *data,
 }
 
 static const struct wl_shell_surface_listener shell_surface_listener = {
-	.ping = &shell_surface_ping,
-	.configure = &shell_surface_configure,
-	.popup_done = &shell_surface_popup_done,
+    .ping = &shell_surface_ping,
+    .configure = &shell_surface_configure,
+    .popup_done = &shell_surface_popup_done,
 };
 
-static void output_geometry(void *data, 
-                            struct wl_output *output, 
-                            int32_t x, 
+static void output_geometry(void *data,
+                            struct wl_output *output,
+                            int32_t x,
                             int32_t y,
-                            int32_t physical_width, 
-                            int32_t physical_height, 
-                            int32_t subpixel, 
-                            const char *make, 
-                            const char *model, 
+                            int32_t physical_width,
+                            int32_t physical_height,
+                            int32_t subpixel,
+                            const char *make,
+                            const char *model,
                             int32_t transform)
 {
     struct win *w = data;
@@ -276,7 +239,7 @@ static void output_geometry(void *data,
     (void) transform;
 }
 
-static void output_mode(void *data, 
+static void output_mode(void *data,
                         struct wl_output *output,
                         uint32_t flags,
                         int32_t width,
@@ -323,11 +286,8 @@ static void win_dispatch_key_event(struct win *w, xkb_keysym_t symbol)
     case XKB_KEY_Return:
         w->quit = true;
         break;
-//    case XKB_KEY_space:
-//        break;
     case XKB_KEY_BackSpace:
-        if (w->curser)
-            w->input[--w->curser] = '\0';
+        textbox_remove(&w->textbox);
         break;
     case XKB_KEY_Tab:
         break;
@@ -338,19 +298,17 @@ static void win_dispatch_key_event(struct win *w, xkb_keysym_t symbol)
     case XKB_KEY_NoSymbol:
         break;
     default:
-        if (w->curser < ARRAY_SIZE(w->input) - 1 && isascii(symbol))
-            w->input[w->curser++] = symbol;
-
+        textbox_insert(&w->textbox, (int) symbol);
         break;
     }
 
     win_draw(w);
 }
 
-static void keyboard_keymap(void *data, 
-                            struct wl_keyboard *keyboard, 
-                            uint32_t format, 
-                            int32_t fd, 
+static void keyboard_keymap(void *data,
+                            struct wl_keyboard *keyboard,
+                            uint32_t format,
+                            int32_t fd,
                             uint32_t size)
 {
     struct win *w = data;
@@ -358,30 +316,30 @@ static void keyboard_keymap(void *data,
     bool ok;
 
     (void) keyboard;
-    
+
     if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1)
-        die("Received invalid keymap format.\n");
+        die("Received invalid keymap format\n");
 
     mem = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
     if (mem == MAP_FAILED)
-        die("Failed to integrate received keymap information.\n");
+        die("Failed to integrate received keymap information\n");
 
     ok = xkb_set_keymap(&w->xkb, mem);
     if (!ok)
-        die("Failed to initialize received keymap.\n");
+        die("Failed to initialize received keymap\n");
 
     munmap(mem, size);
     close(fd);
 }
 
-static void keyboard_enter(void *data, 
-                           struct wl_keyboard *keyboard, 
-                           uint32_t serial, 
-                           struct wl_surface *surface, 
+static void keyboard_enter(void *data,
+                           struct wl_keyboard *keyboard,
+                           uint32_t serial,
+                           struct wl_surface *surface,
                            struct wl_array *keys)
 {
     struct win *w = data;
-    
+
     (void) w;
     (void) keyboard;
     (void) serial;
@@ -389,29 +347,30 @@ static void keyboard_enter(void *data,
     (void) keys;
 }
 
-static void keyboard_leave(void *data, 
-                           struct wl_keyboard *keyboard, 
-                           uint32_t serial, 
+static void keyboard_leave(void *data,
+                           struct wl_keyboard *keyboard,
+                           uint32_t serial,
                            struct wl_surface *surface)
 {
     struct win *w = data;
-    
+
     (void) w;
     (void) keyboard;
     (void) serial;
     (void) surface;
 }
 
-static void keyboard_key(void *data, 
-                         struct wl_keyboard *keyboard, 
-                         uint32_t serial, 
-                         uint32_t time, 
-                         uint32_t key, 
+static void keyboard_key(void *data,
+                         struct wl_keyboard *keyboard,
+                         uint32_t serial,
+                         uint32_t time,
+                         uint32_t key,
                          uint32_t state)
 {
     struct win *w = data;
     struct itimerspec its;
     xkb_keysym_t symbol;
+    int err;
 
     (void) keyboard;
     (void) serial;
@@ -425,9 +384,24 @@ static void keyboard_key(void *data,
     if (!xkb_keymap_ok(&w->xkb))
         return;
 
+    switch (state) {
+    case WL_KEYBOARD_KEY_STATE_PRESSED:
+        symbol = xkb_get_sym(&w->xkb, key);
 
-    if (state == WL_KEYBOARD_KEY_STATE_RELEASED) {
-        int err;
+        win_dispatch_key_event(w, symbol);
+
+        its.it_interval.tv_sec = 0;
+        its.it_interval.tv_nsec = w->rate;
+        its.it_value.tv_sec = 0;
+        its.it_value.tv_nsec = w->delay;
+
+        err = timerfd_settime(w->fd_timer, 0, &its, NULL);
+        if (err < 0)
+            die_error(errno, "timerfd_settime(): failed to start timer\n");
+
+        w->symbol = symbol;
+        break;
+    case WL_KEYBOARD_KEY_STATE_RELEASED:
 
         its.it_value.tv_sec = 0;
         its.it_value.tv_nsec = 0;
@@ -438,33 +412,22 @@ static void keyboard_key(void *data,
         if (err < 0)
             die_error(errno, "timerfd_settime(): failed to cancel timer\n");
 
-        return;
+        break;
+    default:
+        break;
     }
-    
-    symbol = xkb_get_sym(&w->xkb, key);
-
-    win_dispatch_key_event(w, symbol);
-
-    w->last_key = symbol;
-
-    its.it_value.tv_sec = 0;
-    its.it_value.tv_nsec = 1000000 * w->delay;
-    its.it_interval.tv_sec = 0;
-    its.it_interval.tv_nsec = 1000 * 1000 * 1000 / w->rate;
-
-    timerfd_settime(w->fd_timer, 0, &its, NULL);
 }
 
-static void keyboard_modifiers(void *data, 
-                               struct wl_keyboard *keyboard, 
-                               uint32_t serial, 
-                               uint32_t mods_depressed, 
-                               uint32_t mods_latched, 
-                               uint32_t mods_locked, 
+static void keyboard_modifiers(void *data,
+                               struct wl_keyboard *keyboard,
+                               uint32_t serial,
+                               uint32_t mods_depressed,
+                               uint32_t mods_latched,
+                               uint32_t mods_locked,
                                uint32_t group)
 {
     struct win *w = data;
-    
+
     (void) keyboard;
     (void) serial;
 
@@ -474,17 +437,18 @@ static void keyboard_modifiers(void *data,
     xkb_state_update(&w->xkb, mods_depressed, mods_latched, mods_locked, group);
 }
 
-static void keyboard_repeat_info(void *data, 
-                                 struct wl_keyboard *keyboard, 
-                                 int32_t rate, 
+static void keyboard_repeat_info(void *data,
+                                 struct wl_keyboard *keyboard,
+                                 int32_t rate,
                                  int32_t delay)
 {
     struct win *w = data;
 
     (void) keyboard;
 
-    w->rate = rate;
-    w->delay = delay;
+    /* Convert to itimerspec units */
+    w->rate = 1000000000 / rate;
+    w->delay = 1000000 * delay;
 }
 
 const struct wl_keyboard_listener keyboard_listener = {
@@ -496,9 +460,9 @@ const struct wl_keyboard_listener keyboard_listener = {
     .repeat_info = &keyboard_repeat_info,
 };
 
-static void registry_add(void *data, 
-                         struct wl_registry *registry, 
-                         uint32_t name, 
+static void registry_add(void *data,
+                         struct wl_registry *registry,
+                         uint32_t name,
                          const char *interface,
                          uint32_t version)
 {
@@ -506,24 +470,24 @@ static void registry_add(void *data,
     void *item;
 
     (void) version;
- 
+
     if (strcmp(interface, "wl_compositor") == 0) {
         item = wl_registry_bind(registry, name, &wl_compositor_interface, 4);
-        
+
         if (item && w->compositor)
             wl_compositor_destroy(w->compositor);
 
         w->compositor = item;
         return;
     }
-    
+
     if (strcmp(interface, "wl_subcompositor") == 0) {
         item = wl_registry_bind(registry, name, &wl_subcompositor_interface, 1);
 
         if (item && w->subcompositor)
             wl_subcompositor_destroy(w->subcompositor);
 
-        w->subcompositor = item; 
+        w->subcompositor = item;
         return;
     }
 
@@ -564,7 +528,7 @@ static void registry_add(void *data,
 
     if (strcmp(interface, "wl_output") == 0) {
         item = wl_registry_bind(registry, name, &wl_output_interface, 1);
-        
+
         if (item && w->output)
             wl_output_destroy(w->output);
 
@@ -573,9 +537,8 @@ static void registry_add(void *data,
     }
 }
 
-static void registry_remove(void *data, 
-                            struct wl_registry *registry, 
-                            uint32_t name)
+static void
+registry_remove(void *data, struct wl_registry *registry, uint32_t name)
 {
     struct win *w = data;
 
@@ -589,11 +552,8 @@ static const struct wl_registry_listener registry_listener = {
     .global_remove = &registry_remove,
 };
 
-
 static void win_repeat_key(struct win *w)
 {
-    printf("repeat event\n");
-    
     uint64_t val;
     ssize_t size;
 
@@ -601,66 +561,81 @@ static void win_repeat_key(struct win *w)
     if (size != sizeof(val))
         return;
 
-    win_dispatch_key_event(w, w->last_key);
+    win_dispatch_key_event(w, w->symbol);
 }
 
 static void win_dispatch_messages(struct win *w)
 {
     int err;
 
-    printf("Dispatching messages!\n");
-
     err = wl_display_prepare_read(w->display);
+    if (err < 0)
+        die_error(errno, "Failed to prepare to read from display connection");
 
     err = wl_display_read_events(w->display);
+    if (err < 0)
+        die_error(errno, "Failed to read from display connection");
 
     err = wl_display_dispatch_pending(w->display);
+    if (err < 0)
+        die_error(errno, "Failed to dispatch messages from display connection");
 }
 
 struct win_event {
     void (*run)(struct win *w);
 };
 
-static struct win_event wl_display_event = { .run = &win_dispatch_messages };
-static struct win_event key_repeat_event = { .run = &win_repeat_key };
+static struct win_event wl_display_event = {.run = &win_dispatch_messages};
+static struct win_event key_repeat_event = {.run = &win_repeat_key};
+
+static void win_add_epoll_event(struct win *w, int fd, struct win_event *event)
+{
+    struct epoll_event ev;
+    int err;
+
+    ev.events = EPOLLIN;
+    ev.data.ptr = event;
+
+    err = epoll_ctl(w->fd_epoll, EPOLL_CTL_ADD, fd, &ev);
+    if (err < 0)
+        die_error(errno, "epoll_ctl()");
+}
 
 void win_init(struct win *w, const char *display_name)
 {
     struct wl_registry *registry;
-    struct epoll_event ev;
-    int err;
 
     xkb_init(&w->xkb);
 
     w->display = wl_display_connect(display_name);
     if (!w->display)
-        die("Failed to connect to display manager.\n");
+        die_error(errno, "Failed to connect to display manager");
 
     registry = wl_display_get_registry(w->display);
     if (!registry)
-        die("Failed to obtain registry from display manager.\n");
+        die("Failed to create client registry for communication\n");
 
     wl_registry_add_listener(registry, &registry_listener, w);
 
     wl_display_roundtrip(w->display);
-    
+
     if (!w->compositor)
-        die("Failed to initialize compositor protocol\n");
+        die("Failed to initialize compositor object\n");
 
     if (!w->subcompositor)
-        die("Failed to initialize subcompositor protocol\n");
+        die("Failed to initialize subcompositor object\n");
 
     if (!w->shell)
-        die("Failed to initialize shell protocol.\n");
+        die("Failed to initialize shell object\n");
 
     if (!w->shm)
-        die("Failed to initialize shared memory protocol.\n");
+        die("Failed to initialize shared memory object\n");
 
     if (!w->seat)
-        die("Failed to initialize seat protocol - no input possible.\n");
+        die("Failed to initialize seat object\n");
 
     if (!w->output)
-        die("Failed to retrieve output data - no configuration possible.\n");
+        die("Failed to retrieve output object\n");
 
     w->surface = wl_compositor_create_surface(w->compositor);
     if (!w->surface)
@@ -668,56 +643,41 @@ void win_init(struct win *w, const char *display_name)
 
     w->shell_surface = wl_shell_get_shell_surface(w->shell, w->surface);
     if (!w->shell_surface)
-        die("Failed to create application window.\n");
+        die("Failed to create application window\n");
 
     wl_surface_add_listener(w->surface, &surface_listener, w);
     wl_shell_surface_add_listener(w->shell_surface, &shell_surface_listener, w);
+
+    w->buffer = NULL;
+
+    framebuffer_init(&w->framebuffer);
+    textbox_init(&w->textbox);
+
+    w->fd_epoll = epoll_create1(EPOLL_CLOEXEC);
+    if (w->fd_epoll < 0)
+        die_error(errno, "epoll_create1()");
 
     w->fd_timer = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC);
     if (w->fd_timer < 0)
         die_error(errno, "timerfd_create()");
 
-    w->fd_epoll= epoll_create1(EPOLL_CLOEXEC);
-    if (w->fd_epoll < 0)
-        die_error(errno, "epoll_create1()");
+    win_add_epoll_event(w, w->fd_timer, &key_repeat_event);
+    win_add_epoll_event(w, wl_display_get_fd(w->display), &wl_display_event);
 
-    ev.events = EPOLLIN;
-    ev.data.ptr = &key_repeat_event;
-
-    err = epoll_ctl(w->fd_epoll, EPOLL_CTL_ADD, w->fd_timer, &ev);
-    if (err < 0)
-        die_error(errno, "epoll_ctl()");
-
-    ev.events = EPOLLIN;
-    ev.data.ptr = &wl_display_event;
-   
-    err = epoll_ctl(w->fd_epoll, EPOLL_CTL_ADD, wl_display_get_fd(w->display), &ev);
-    if (err < 0)
-        die_error(errno, "epoll_ctl()");
-
-    w->mem = NULL;
-    w->buffer = NULL;
-    w->cairo = NULL;
-
-    memset(w->input, '\0', ARRAY_SIZE(w->input));
-    w->curser = 0;
-
+    w->dirty = false;
     w->quit = false;
 }
 
 void win_destroy(struct win *w)
 {
-    if (w->cairo)
-        cairo_destroy(w->cairo);
+    close(w->fd_timer);
+    close(w->fd_epoll);
+
+    textbox_destroy(&w->textbox);
+    framebuffer_destroy(&w->framebuffer);
 
     if (w->buffer)
         wl_buffer_destroy(w->buffer);
- 
-    if (w->mem)
-        munmap(w->mem, w->size);
-
-    close(w->fd_epoll);
-    close(w->fd_timer);
 
     wl_shell_surface_destroy(w->shell_surface);
     wl_surface_destroy(w->surface);
@@ -760,6 +720,5 @@ void win_mainloop(struct win *w)
 
         while (n--)
             ((struct win_event *) events[n].data.ptr)->run(w);
-
     }
 }

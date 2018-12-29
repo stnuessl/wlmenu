@@ -27,7 +27,7 @@
 
 void die(const char *fmt, ...) __attribute__((noreturn, format(printf, 1, 2)));
 
-void die_error(int err, const char *fmt, ...) 
-__attribute__((noreturn, format(printf, 2, 3)));
+void die_error(int err, const char *fmt, ...)
+    __attribute__((noreturn, format(printf, 2, 3)));
 
 #endif /* PROC_UTIL_H_ */

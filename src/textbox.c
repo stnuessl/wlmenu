@@ -22,33 +22,43 @@
  * SOFTWARE.
  */
 
-#ifndef XKB_H_
-#define XKB_H_
+#include <ctype.h>
+#include <string.h>
 
-#include <stdbool.h>
+#include "textbox.h"
 
-#include <xkbcommon/xkbcommon.h>
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof(*(x)))
 
-struct xkb {
-    struct xkb_keymap *keymap;
-    struct xkb_state *state;
-    struct xkb_context *context;
-};
+void textbox_init(struct textbox *tb)
+{
+    memset(tb->input, '\0', ARRAY_SIZE(tb->input));
+    tb->size = 0;
+}
 
-void xkb_init(struct xkb *xkb);
+void textbox_destroy(struct textbox *tb)
+{
+    (void) tb;
+}
 
-void xkb_destroy(struct xkb *xkb);
+void textbox_clear(struct textbox *tb)
+{
+    while (tb->size--)
+        tb->input[tb->size] = '\0';
+}
 
-bool xkb_keymap_ok(const struct xkb *xkb);
+void textbox_insert(struct textbox *tb, int c)
+{
+    if (tb->size < ARRAY_SIZE(tb->input) - 1 && isascii(c))
+        tb->input[tb->size++] = c;
+}
 
-bool xkb_set_keymap(struct xkb *xkb, const char *desc);
+void textbox_remove(struct textbox *tb)
+{
+    if (tb->size)
+        tb->input[--tb->size] = '\0';
+}
 
-xkb_keysym_t xkb_get_sym(struct xkb *xkb, uint32_t key);
-
-void xkb_state_update(struct xkb *xkb,
-                      uint32_t mods_depressed,
-                      uint32_t mods_latched,
-                      uint32_t mods_locked,
-                      uint32_t group);
-
-#endif /* XKB_H_ */
+const char *textbox_str(const struct textbox *tb)
+{
+    return tb->input;
+}

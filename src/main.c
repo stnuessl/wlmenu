@@ -22,19 +22,19 @@
  * SOFTWARE.
  */
 
+#include <ctype.h>
+#include <errno.h>
 #include <pthread.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <errno.h>
 #include <unistd.h>
-#include <ctype.h>
 
-#include "win.h"
 #include "load.h"
 #include "proc-util.h"
+#include "win.h"
 
 static struct win win;
 static struct item *list;
@@ -62,9 +62,6 @@ static void match(const char *str, struct item *list, size_t size)
             list[i].hits = (unsigned int) len;
     }
 }
-
-
-
 
 #if 0
 static int make_directories(const char *path, mode_t mode)
@@ -119,14 +116,14 @@ int main(int argc, char *argv[])
 
     err = pthread_create(&thread, NULL, &thr_load, NULL);
     if (err < 0)
-        die("Failed to load applications.\n");
+        die("Failed to load runnable applications\n");
 
     win_init(&win, NULL);
     win_set_title(&win, "wlmenu");
     win_show(&win);
 
     (void) pthread_join(thread, NULL);
-  
+
     printf("Entering dispatch mode\n");
 
     win_mainloop(&win);

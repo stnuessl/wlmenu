@@ -22,33 +22,26 @@
  * SOFTWARE.
  */
 
-#ifndef XKB_H_
-#define XKB_H_
+#ifndef TEXTBOX_H_
+#define TEXTBOX_H_
 
-#include <stdbool.h>
+#include <stddef.h>
 
-#include <xkbcommon/xkbcommon.h>
-
-struct xkb {
-    struct xkb_keymap *keymap;
-    struct xkb_state *state;
-    struct xkb_context *context;
+struct textbox {
+    char input[64];
+    size_t size;
 };
 
-void xkb_init(struct xkb *xkb);
+void textbox_init(struct textbox *tb);
 
-void xkb_destroy(struct xkb *xkb);
+void textbox_destroy(struct textbox *tb);
 
-bool xkb_keymap_ok(const struct xkb *xkb);
+void textbox_clear(struct textbox *tb);
 
-bool xkb_set_keymap(struct xkb *xkb, const char *desc);
+void textbox_insert(struct textbox *tb, int c);
 
-xkb_keysym_t xkb_get_sym(struct xkb *xkb, uint32_t key);
+void textbox_remove(struct textbox *tb);
 
-void xkb_state_update(struct xkb *xkb,
-                      uint32_t mods_depressed,
-                      uint32_t mods_latched,
-                      uint32_t mods_locked,
-                      uint32_t group);
+const char *textbox_str(const struct textbox *tb);
 
-#endif /* XKB_H_ */
+#endif /* TEXTBOX_H_ */
