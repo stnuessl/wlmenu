@@ -43,6 +43,8 @@ bool xkb_keymap_ok(const struct xkb *xkb);
 
 bool xkb_set_keymap(struct xkb *xkb, const char *desc);
 
+bool xkb_set_wl_keymap(struct xkb *xkb, int fd, size_t size);
+
 xkb_keysym_t xkb_get_sym(struct xkb *xkb, uint32_t key);
 
 void xkb_state_update(struct xkb *xkb,

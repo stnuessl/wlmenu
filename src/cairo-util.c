@@ -22,55 +22,17 @@
  * SOFTWARE.
  */
 
-#ifndef WIN_H_
-#define WIN_H_
+#include "cairo-util.h"
 
-#include <wayland-client.h>
+void cairo_util_make_color_u32(uint32_t rgba, struct color *c)
+{
+    c->red = (double) ((rgba & 0xff000000) >> 24) / 255.0;
+    c->green = (double) ((rgba & 0x00ff0000) >> 16) / 255.0;
+    c->blue = (double) ((rgba & 0x0000ff00) >> 8) / 255.0;
+    c->alpha = (double) (rgba & 0x000000ff) / 255.0;
+}
 
-#include "framebuffer.h"
-#include "textbox.h"
-#include "xkb.h"
-
-struct win {
-    struct xkb xkb;
-
-    struct wl_display *display;
-    struct wl_compositor *compositor;
-    struct wl_subcompositor *subcompositor;
-    struct wl_shell *shell;
-    struct wl_shm *shm;
-    struct wl_seat *seat;
-    struct wl_output *output;
-    struct wl_surface *surface;
-    struct wl_shell_surface *shell_surface;
-    struct wl_buffer *buffer;
-
-    struct framebuffer framebuffer;
-    struct textbox textbox;
-
-    uint32_t serial;
-
-    int32_t rate;
-    int32_t delay;
-    xkb_keysym_t symbol;
-
-    int fd_epoll;
-    int fd_timer;
-
-    uint8_t dirty : 1;
-    uint8_t quit : 1;
-};
-
-void win_init(struct win *w, const char *display_name);
-
-void win_destroy(struct win *w);
-
-void win_set_title(struct win *w, const char *title);
-
-void win_set_class(struct win *w, const char *name);
-
-void win_show(struct win *w);
-
-void win_mainloop(struct win *w);
-
-#endif /* WIN_H_ */
+void cairo_util_set_source(cairo_t *cairo, const struct color *c)
+{
+    cairo_set_source_rgba(cairo, c->red, c->green, c->blue, c->alpha);
+}

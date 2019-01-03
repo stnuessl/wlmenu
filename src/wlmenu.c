@@ -31,76 +31,133 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "win.h"
+#include <cairo-ft.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
+#include "wlmenu.h"
 
 #include "proc-util.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 
-static void win_draw_background(struct win *w)
+static void wlmenu_draw_background(struct wlmenu *w)
 {
     cairo_t *cairo = framebuffer_cairo(&w->framebuffer);
-    int32_t width = 400;
-    int32_t height = 200;
-    int32_t x = (framebuffer_width(&w->framebuffer) - width) / 2;
-    int32_t y = (framebuffer_height(&w->framebuffer) - height) / 2;
-    double val = 40.0 / 255.0;
 
-    cairo_set_source_rgba(cairo, val, val, val, 1.0);
-    cairo_rectangle(cairo, x, y, width, height);
-    cairo_fill(cairo);
-
-    cairo_set_source_rgba(cairo, 1.0, 0.0, 0.0, 1.0);
-    cairo_set_line_width(cairo, 10.0);
-    cairo_rectangle(cairo, x, y, width, height);
-    cairo_stroke(cairo);
-
-    wl_surface_damage_buffer(w->surface, x, y, width, height);
+    cairo_set_source_rgba(cairo, 0.0, 0.0, 0.0, 0.0);
+    cairo_paint(cairo);
 }
 
-static void win_draw_text(struct win *w)
+static void wlmenu_draw_input_textbox(struct wlmenu *w)
 {
     cairo_t *cairo = framebuffer_cairo(&w->framebuffer);
-    int32_t width = 400;
-    int32_t height = 200;
-    int32_t x = (framebuffer_width(&w->framebuffer) - width) / 2;
-    int32_t y = (framebuffer_height(&w->framebuffer) - height) / 2;
+    int32_t max_width = framebuffer_width(&w->framebuffer);
+    int32_t max_height = framebuffer_height(&w->framebuffer);
 
+#if 1
+    FT_Library ft_lib;
+    FT_Face ft_face;
+    cairo_font_face_t *font;
+    cairo_scaled_font_t *scaled_font;
+    cairo_glyph_t *glyphs = NULL;
+    int n_glyphs = 0;
+    cairo_status_t status;
+    size_t size = textbox_size(&w->textbox);
+    cairo_text_extents_t extents;
+    cairo_font_extents_t font_extents;
+    int err;
+
+    err = FT_Init_FreeType(&ft_lib);
+    if (err != 0)
+        die("FT_Init_FreeType()\n");
+
+    err = FT_New_Face(ft_lib, "/usr/share/fonts/TTF/Hack-Regular.ttf", 0,
+                      &ft_face);
+    if (err != 0)
+        die("FT_New_Face()\n");
+
+    font = cairo_ft_font_face_create_for_ft_face(ft_face, FT_LOAD_DEFAULT);
+    if (cairo_font_face_status(font) != CAIRO_STATUS_SUCCESS)
+
+        cairo_set_font_face(cairo, font);
+    cairo_set_font_size(cairo, 16.0);
+
+    scaled_font = cairo_get_scaled_font(cairo);
+    if (cairo_scaled_font_status(scaled_font) != CAIRO_STATUS_SUCCESS)
+        die("cairo_scaled_font_create()\n");
+
+    cairo_scaled_font_extents(scaled_font, &font_extents);
+
+    int32_t width = max_width / 3;
+    int32_t height = font_extents.height * 2 - font_extents.height / 2;
+    int32_t x = (max_width - width) / 2;
+    int32_t y = (max_height - height) / 2;
+
+    cairo_util_set_source(cairo, &w->bg);
+    cairo_rectangle(cairo, x, y, width, height);
+    cairo_fill_preserve(cairo);
+
+    cairo_util_set_source(cairo, &w->border);
+    cairo_set_line_width(cairo, 1.0);
+    cairo_stroke(cairo);
+
+    status = cairo_scaled_font_text_to_glyphs(
+        scaled_font, x + font_extents.max_x_advance,
+        y + (height + font_extents.ascent - font_extents.descent) / 2,
+        textbox_str(&w->textbox), size, &glyphs, &n_glyphs, NULL, NULL, NULL);
+    if (status != CAIRO_STATUS_SUCCESS)
+        die("text_to_glyphs()\n");
+
+    cairo_util_set_source(cairo, &w->fg);
+    cairo_show_glyphs(cairo, glyphs, n_glyphs);
+
+    cairo_glyph_free(glyphs);
+
+#if 0
+    cairo_font_face_destroy(font);
+    FT_Done_Face(ft_face);
+    FT_Done_FreeType(ft_lib);
+#endif
+#else
     cairo_select_font_face(cairo, "Hack", CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cairo, 16.0);
     cairo_set_source_rgba(cairo, 0.0, 255.0, 0.0, 1.0);
     cairo_move_to(cairo, x + 20.0, y + 20.0);
     cairo_show_text(cairo, textbox_str(&w->textbox));
+#endif
 
-    wl_surface_damage_buffer(w->surface, x, y, width, height);
+    wl_surface_damage_buffer(w->surface, 0, 0, max_width, max_height);
+    //    wl_surface_damage_buffer(w->surface, x, y, width, height);
 }
 
-static void win_draw(struct win *w)
+static void wlmenu_draw(struct wlmenu *w)
 {
-    if (!w->buffer) {
+    if (!w->released) {
         w->dirty = true;
         return;
     }
 
-    win_draw_background(w);
-    win_draw_text(w);
+    wlmenu_draw_background(w);
+    wlmenu_draw_input_textbox(w);
 
     wl_surface_attach(w->surface, w->buffer, 0, 0);
     wl_surface_commit(w->surface);
 
-    w->buffer = NULL;
+    w->released = false;
 }
 
 static void buffer_release(void *data, struct wl_buffer *buffer)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
-    w->buffer = buffer;
-    printf("Buffer released!\n");
+    (void) buffer;
+
+    w->released = true;
 
     if (w->dirty) {
-        win_draw(w);
+        wlmenu_draw(w);
         w->dirty = false;
     }
 }
@@ -112,7 +169,7 @@ static const struct wl_buffer_listener buffer_listener = {
 static void
 surface_enter(void *data, struct wl_surface *surface, struct wl_output *output)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
     (void) w;
     (void) surface;
@@ -122,7 +179,7 @@ surface_enter(void *data, struct wl_surface *surface, struct wl_output *output)
 static void
 surface_leave(void *data, struct wl_surface *surface, struct wl_output *output)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
     (void) w;
     (void) surface;
@@ -138,7 +195,7 @@ static void shell_surface_ping(void *data,
                                struct wl_shell_surface *shell_surface,
                                uint32_t serial)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
     w->serial = serial;
 
@@ -151,18 +208,20 @@ static void shell_surface_configure(void *data,
                                     int32_t width,
                                     int32_t height)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
     struct wl_shm_pool *pool;
-    int32_t fb_width, fb_height;
+    int32_t current_width, current_height;
     int fd, err;
 
-    (void) shell_surface;
     (void) edges;
 
-    fb_width = framebuffer_width(&w->framebuffer);
-    fb_height = framebuffer_height(&w->framebuffer);
+    if (w->shell_surface != shell_surface)
+        die("shell_surface_configure(): invalid shell surface\n");
 
-    if (fb_width == width && fb_height == height)
+    current_width = framebuffer_width(&w->framebuffer);
+    current_height = framebuffer_height(&w->framebuffer);
+
+    if (current_width == width && current_height == height)
         return;
 
     if (width < 0 || height < 0)
@@ -184,25 +243,30 @@ static void shell_surface_configure(void *data,
     if (!pool)
         die("Failed to share framebuffer with display manager\n");
 
-    w->buffer = wl_shm_pool_create_buffer(
-        pool, 0, framebuffer_width(&w->framebuffer),
-        framebuffer_height(&w->framebuffer),
-        framebuffer_stride(&w->framebuffer), WL_SHM_FORMAT_ARGB8888);
+    /* clang-format off */
+    w->buffer = wl_shm_pool_create_buffer(pool,
+                                          0,
+                                          framebuffer_width(&w->framebuffer),
+                                          framebuffer_height(&w->framebuffer),
+                                          framebuffer_stride(&w->framebuffer),
+                                          WL_SHM_FORMAT_ARGB8888);
+    /* clang-format on */
     if (!w->buffer)
         die("Failed to create buffer for window surface\n");
 
     wl_buffer_add_listener(w->buffer, &buffer_listener, w);
+    w->released = true;
 
     wl_shm_pool_destroy(pool);
     close(fd);
 
-    win_draw(w);
+    wlmenu_draw(w);
 }
 
 static void shell_surface_popup_done(void *data,
                                      struct wl_shell_surface *shell_surface)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
     (void) w;
     (void) shell_surface;
@@ -225,7 +289,7 @@ static void output_geometry(void *data,
                             const char *model,
                             int32_t transform)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
     (void) w;
     (void) output;
@@ -246,7 +310,7 @@ static void output_mode(void *data,
                         int32_t height,
                         int32_t refresh)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
     (void) w;
     (void) output;
@@ -258,7 +322,7 @@ static void output_mode(void *data,
 
 static void output_done(void *data, struct wl_output *output)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
     (void) w;
     (void) output;
@@ -266,7 +330,7 @@ static void output_done(void *data, struct wl_output *output)
 
 static void output_scale(void *data, struct wl_output *output, int32_t factor)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
     (void) w;
     (void) output;
@@ -280,7 +344,7 @@ const struct wl_output_listener output_listener = {
     .scale = &output_scale,
 };
 
-static void win_dispatch_key_event(struct win *w, xkb_keysym_t symbol)
+static void wlmenu_dispatch_key_event(struct wlmenu *w, xkb_keysym_t symbol)
 {
     switch (symbol) {
     case XKB_KEY_Return:
@@ -302,7 +366,7 @@ static void win_dispatch_key_event(struct win *w, xkb_keysym_t symbol)
         break;
     }
 
-    win_draw(w);
+    wlmenu_draw(w);
 }
 
 static void keyboard_keymap(void *data,
@@ -311,7 +375,7 @@ static void keyboard_keymap(void *data,
                             int32_t fd,
                             uint32_t size)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
     char *mem;
     bool ok;
 
@@ -338,13 +402,13 @@ static void keyboard_enter(void *data,
                            struct wl_surface *surface,
                            struct wl_array *keys)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
-    (void) w;
     (void) keyboard;
-    (void) serial;
     (void) surface;
     (void) keys;
+
+    w->serial = serial;
 }
 
 static void keyboard_leave(void *data,
@@ -352,12 +416,12 @@ static void keyboard_leave(void *data,
                            uint32_t serial,
                            struct wl_surface *surface)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
-    (void) w;
     (void) keyboard;
-    (void) serial;
     (void) surface;
+
+    w->serial = serial;
 }
 
 static void keyboard_key(void *data,
@@ -367,7 +431,7 @@ static void keyboard_key(void *data,
                          uint32_t key,
                          uint32_t state)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
     struct itimerspec its;
     xkb_keysym_t symbol;
     int err;
@@ -388,7 +452,7 @@ static void keyboard_key(void *data,
     case WL_KEYBOARD_KEY_STATE_PRESSED:
         symbol = xkb_get_sym(&w->xkb, key);
 
-        win_dispatch_key_event(w, symbol);
+        wlmenu_dispatch_key_event(w, symbol);
 
         its.it_interval.tv_sec = 0;
         its.it_interval.tv_nsec = w->rate;
@@ -426,7 +490,7 @@ static void keyboard_modifiers(void *data,
                                uint32_t mods_locked,
                                uint32_t group)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
     (void) keyboard;
     (void) serial;
@@ -442,7 +506,7 @@ static void keyboard_repeat_info(void *data,
                                  int32_t rate,
                                  int32_t delay)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
     (void) keyboard;
 
@@ -460,79 +524,117 @@ const struct wl_keyboard_listener keyboard_listener = {
     .repeat_info = &keyboard_repeat_info,
 };
 
+static void
+wlmenu_bind_compositor(struct wlmenu *w, uint32_t name, uint32_t version)
+{
+    const struct wl_interface *interface = &wl_compositor_interface;
+
+    w->compositor = wl_registry_bind(w->registry, name, interface, version);
+    if (!w->compositor)
+        die("Failed to bind to compositor interface\n");
+}
+
+static void
+wlmenu_bind_subcompositor(struct wlmenu *w, uint32_t name, uint32_t version)
+{
+    const struct wl_interface *interface = &wl_subcompositor_interface;
+
+    w->subcompositor = wl_registry_bind(w->registry, name, interface, version);
+    if (!w->subcompositor)
+        die("Failed to bind to subcompositor interface\n");
+}
+
+static void wlmenu_bind_shell(struct wlmenu *w, uint32_t name, uint32_t version)
+{
+    const struct wl_interface *interface = &wl_shell_interface;
+
+    w->shell = wl_registry_bind(w->registry, name, interface, version);
+    if (!w->shell)
+        die("Failed to bind to shell interface\n");
+}
+
+static void wlmenu_bind_shm(struct wlmenu *w, uint32_t name, uint32_t version)
+{
+    const struct wl_interface *interface = &wl_shm_interface;
+
+    w->shm = wl_registry_bind(w->registry, name, interface, version);
+    if (!w->shm)
+        die("Failed to bind to shared memory interface\n");
+}
+
+static void wlmenu_bind_seat(struct wlmenu *w, uint32_t name, uint32_t version)
+{
+    const struct wl_interface *interface = &wl_seat_interface;
+
+    /* We can make this hot-pluggable */
+    if (w->keyboard)
+        wl_keyboard_destroy(w->keyboard);
+
+    if (w->seat)
+        wl_seat_destroy(w->seat);
+
+    w->seat = wl_registry_bind(w->registry, name, interface, version);
+    if (!w->seat)
+        die("Failed to bind to seat interface\n");
+
+    w->keyboard = wl_seat_get_keyboard(w->seat);
+    if (!w->keyboard)
+        die("Failed to bind to keyboard interface\n");
+
+    wl_keyboard_add_listener(w->keyboard, &keyboard_listener, w);
+}
+
+static void
+wlmenu_bind_output(struct wlmenu *w, uint32_t name, uint32_t version)
+{
+    const struct wl_interface *interface = &wl_output_interface;
+
+    /* We can make this hot-pluggable */
+    if (w->output)
+        wl_output_destroy(w->output);
+
+    w->output = wl_registry_bind(w->registry, name, interface, version);
+    if (!w->output)
+        die("Failed to bind to output interface\n");
+}
+
 static void registry_add(void *data,
                          struct wl_registry *registry,
                          uint32_t name,
                          const char *interface,
                          uint32_t version)
 {
-    struct win *w = data;
-    void *item;
+    struct wlmenu *w = data;
 
-    (void) version;
+    (void) registry;
 
     if (strcmp(interface, "wl_compositor") == 0) {
-        item = wl_registry_bind(registry, name, &wl_compositor_interface, 4);
-
-        if (item && w->compositor)
-            wl_compositor_destroy(w->compositor);
-
-        w->compositor = item;
+        wlmenu_bind_compositor(w, name, version);
         return;
     }
 
     if (strcmp(interface, "wl_subcompositor") == 0) {
-        item = wl_registry_bind(registry, name, &wl_subcompositor_interface, 1);
-
-        if (item && w->subcompositor)
-            wl_subcompositor_destroy(w->subcompositor);
-
-        w->subcompositor = item;
+        wlmenu_bind_subcompositor(w, name, version);
         return;
     }
-
+    
     if (strcmp(interface, "wl_shell") == 0) {
-        item = wl_registry_bind(registry, name, &wl_shell_interface, 1);
-
-        if (item && w->shell)
-            wl_shell_destroy(w->shell);
-
-        w->shell = item;
+        wlmenu_bind_shell(w, name, version);
         return;
     }
-
+    
     if (strcmp(interface, "wl_shm") == 0) {
-        item = wl_registry_bind(registry, name, &wl_shm_interface, 1);
-
-        if (item && w->shm)
-            wl_shm_destroy(w->shm);
-
-        w->shm = item;
+        wlmenu_bind_shm(w, name, version);
         return;
     }
 
     if (strcmp(interface, "wl_seat") == 0) {
-        struct wl_keyboard *keyboard;
-
-        item = wl_registry_bind(registry, name, &wl_seat_interface, 4);
-
-        if (item && w->seat)
-            wl_seat_destroy(w->seat);
-
-        w->seat = item;
-
-        keyboard = wl_seat_get_keyboard(w->seat);
-        wl_keyboard_add_listener(keyboard, &keyboard_listener, w);
+        wlmenu_bind_seat(w, name, version);
         return;
     }
 
     if (strcmp(interface, "wl_output") == 0) {
-        item = wl_registry_bind(registry, name, &wl_output_interface, 1);
-
-        if (item && w->output)
-            wl_output_destroy(w->output);
-
-        w->output = item;
+        wlmenu_bind_output(w, name, version);
         return;
     }
 }
@@ -540,7 +642,7 @@ static void registry_add(void *data,
 static void
 registry_remove(void *data, struct wl_registry *registry, uint32_t name)
 {
-    struct win *w = data;
+    struct wlmenu *w = data;
 
     (void) w;
     (void) registry;
@@ -552,7 +654,7 @@ static const struct wl_registry_listener registry_listener = {
     .global_remove = &registry_remove,
 };
 
-static void win_repeat_key(struct win *w)
+static void wlmenu_repeat_key(struct wlmenu *w)
 {
     uint64_t val;
     ssize_t size;
@@ -561,10 +663,10 @@ static void win_repeat_key(struct win *w)
     if (size != sizeof(val))
         return;
 
-    win_dispatch_key_event(w, w->symbol);
+    wlmenu_dispatch_key_event(w, w->symbol);
 }
 
-static void win_dispatch_messages(struct win *w)
+static void wlmenu_dispatch_messages(struct wlmenu *w)
 {
     int err;
 
@@ -581,14 +683,22 @@ static void win_dispatch_messages(struct win *w)
         die_error(errno, "Failed to dispatch messages from display connection");
 }
 
-struct win_event {
-    void (*run)(struct win *w);
+struct wlmenu_event {
+    void (*run)(struct wlmenu *w);
 };
 
-static struct win_event wl_display_event = {.run = &win_dispatch_messages};
-static struct win_event key_repeat_event = {.run = &win_repeat_key};
+/* clang-format off */
+static struct wlmenu_event wl_display_event = {
+    .run = &wlmenu_dispatch_messages
+};
 
-static void win_add_epoll_event(struct win *w, int fd, struct win_event *event)
+static struct wlmenu_event key_repeat_event = {
+    .run = &wlmenu_repeat_key
+};
+/* clang-format on */
+
+static void
+wlmenu_add_epoll_event(struct wlmenu *w, int fd, struct wlmenu_event *event)
 {
     struct epoll_event ev;
     int err;
@@ -601,9 +711,9 @@ static void win_add_epoll_event(struct win *w, int fd, struct win_event *event)
         die_error(errno, "epoll_ctl()");
 }
 
-void win_init(struct win *w, const char *display_name)
+void wlmenu_init(struct wlmenu *w, const char *display_name)
 {
-    struct wl_registry *registry;
+    memset(w, 0, sizeof(*w));
 
     xkb_init(&w->xkb);
 
@@ -611,44 +721,42 @@ void win_init(struct win *w, const char *display_name)
     if (!w->display)
         die_error(errno, "Failed to connect to display manager");
 
-    registry = wl_display_get_registry(w->display);
-    if (!registry)
-        die("Failed to create client registry for communication\n");
+    w->registry = wl_display_get_registry(w->display);
+    if (!w->registry)
+        die("Failed to create registry for binding to server interfaces\n");
 
-    wl_registry_add_listener(registry, &registry_listener, w);
+    wl_registry_add_listener(w->registry, &registry_listener, w);
 
     wl_display_roundtrip(w->display);
 
     if (!w->compositor)
-        die("Failed to initialize compositor object\n");
+        die_error(EPROTO, "Didn't receive compositor interface");
 
     if (!w->subcompositor)
-        die("Failed to initialize subcompositor object\n");
+        die_error(EPROTO, "Didn't receive subcompositor interface");
 
     if (!w->shell)
-        die("Failed to initialize shell object\n");
+        die_error(EPROTO, "Didn't receive shell interface");
 
     if (!w->shm)
-        die("Failed to initialize shared memory object\n");
+        die_error(EPROTO, "Didn't receive shared memory interface");
 
     if (!w->seat)
-        die("Failed to initialize seat object\n");
+        die_error(EPROTO, "Didn't receive seat interface");
 
     if (!w->output)
-        die("Failed to retrieve output object\n");
+        die_error(EPROTO, "Didn't receive output interface");
 
     w->surface = wl_compositor_create_surface(w->compositor);
     if (!w->surface)
-        die("Failed to create window surface\n");
+        die("Failed to create application surface\n");
 
     w->shell_surface = wl_shell_get_shell_surface(w->shell, w->surface);
     if (!w->shell_surface)
         die("Failed to create application window\n");
-
+    
     wl_surface_add_listener(w->surface, &surface_listener, w);
     wl_shell_surface_add_listener(w->shell_surface, &shell_surface_listener, w);
-
-    w->buffer = NULL;
 
     framebuffer_init(&w->framebuffer);
     textbox_init(&w->textbox);
@@ -661,14 +769,11 @@ void win_init(struct win *w, const char *display_name)
     if (w->fd_timer < 0)
         die_error(errno, "timerfd_create()");
 
-    win_add_epoll_event(w, w->fd_timer, &key_repeat_event);
-    win_add_epoll_event(w, wl_display_get_fd(w->display), &wl_display_event);
-
-    w->dirty = false;
-    w->quit = false;
+    wlmenu_add_epoll_event(w, w->fd_timer, &key_repeat_event);
+    wlmenu_add_epoll_event(w, wl_display_get_fd(w->display), &wl_display_event);
 }
 
-void win_destroy(struct win *w)
+void wlmenu_destroy(struct wlmenu *w)
 {
     close(w->fd_timer);
     close(w->fd_epoll);
@@ -687,27 +792,43 @@ void win_destroy(struct win *w)
     wl_shell_destroy(w->shell);
     wl_subcompositor_destroy(w->subcompositor);
     wl_compositor_destroy(w->compositor);
+    wl_registry_destroy(w->registry);
     wl_display_disconnect(w->display);
 
     xkb_destroy(&w->xkb);
 }
 
-void win_set_title(struct win *w, const char *title)
+void wlmenu_set_window_title(struct wlmenu *w, const char *title)
 {
     wl_shell_surface_set_title(w->shell_surface, title);
 }
 
-void win_set_class(struct win *w, const char *name)
+void wlmenu_set_window_class(struct wlmenu *w, const char *name)
 {
     wl_shell_surface_set_class(w->shell_surface, name);
 }
 
-void win_show(struct win *w)
+void wlmenu_set_foreground(struct wlmenu *w, uint32_t rgba)
+{
+    cairo_util_make_color_u32(rgba, &w->fg);
+}
+
+void wlmenu_set_background(struct wlmenu *w, uint32_t rgba)
+{
+    cairo_util_make_color_u32(rgba, &w->bg);
+}
+
+void wlmenu_set_border(struct wlmenu *w, uint32_t rgba)
+{
+    cairo_util_make_color_u32(rgba, &w->border);
+}
+
+void wlmenu_show(struct wlmenu *w)
 {
     wl_shell_surface_set_maximized(w->shell_surface, NULL);
 }
 
-void win_mainloop(struct win *w)
+void wlmenu_mainloop(struct wlmenu *w)
 {
     struct epoll_event events[2];
 
@@ -719,6 +840,6 @@ void win_mainloop(struct win *w)
             die_error(errno, "epoll_wait()");
 
         while (n--)
-            ((struct win_event *) events[n].data.ptr)->run(w);
+            ((struct wlmenu_event *) events[n].data.ptr)->run(w);
     }
 }

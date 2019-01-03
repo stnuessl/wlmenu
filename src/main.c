@@ -34,9 +34,9 @@
 
 #include "load.h"
 #include "proc-util.h"
-#include "win.h"
+#include "wlmenu.h"
 
-static struct win win;
+static struct wlmenu wlmenu;
 static struct item *list;
 static size_t size;
 
@@ -90,21 +90,6 @@ static int make_directories(const char *path, mode_t mode)
 }
 #endif
 
-#if 0
-void main_win_draw(void *arg)
-{
-    printf("Drawing!\n");
-
-    struct window *win = arg;
-    cairo_t *cr = window_cairo(win);
-    
-    cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, .5);
-    cairo_rectangle(cr, 0, 0, 200, 200);
-    cairo_fill(cr);
-//    cairo_paint(cr);
-}
-#endif
-
 int main(int argc, char *argv[])
 {
     pthread_t thread;
@@ -118,17 +103,20 @@ int main(int argc, char *argv[])
     if (err < 0)
         die("Failed to load runnable applications\n");
 
-    win_init(&win, NULL);
-    win_set_title(&win, "wlmenu");
-    win_show(&win);
+    wlmenu_init(&wlmenu, NULL);
+    wlmenu_set_window_title(&wlmenu, "wlmenu");
+    wlmenu_set_foreground(&wlmenu, 0xff0000ff);
+    wlmenu_set_background(&wlmenu, 0x282828ff);
+    wlmenu_set_border(&wlmenu, 0xffffffff);
+    wlmenu_show(&wlmenu);
 
     (void) pthread_join(thread, NULL);
 
     printf("Entering dispatch mode\n");
 
-    win_mainloop(&win);
+    wlmenu_mainloop(&wlmenu);
 
-    win_destroy(&win);
+    wlmenu_destroy(&wlmenu);
     fprintf(stdout, "Goodbye!\n");
 
     return EXIT_SUCCESS;

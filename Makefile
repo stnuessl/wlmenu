@@ -131,8 +131,9 @@ INCLUDE		:= \
 # Add used libraries which are configurable with pkg-config
 #
 PKGCONF		:= \
-		wayland-client										\
         cairo                                               \
+        freetype2                                           \
+		wayland-client										\
         xkbcommon                                           \
 # 		gstreamer-1.0										\
 # 		gstreamer-pbutils-1.0								\

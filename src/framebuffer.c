@@ -76,8 +76,13 @@ int framebuffer_configure(struct framebuffer *fb,
     if (mem == MAP_FAILED)
         return -errno;
 
-    surface =
-        cairo_image_surface_create_for_data(mem, format, width, height, stride);
+    /* clang-format off */
+    surface = cairo_image_surface_create_for_data(mem,
+                                                  format,
+                                                  width,
+                                                  height,
+                                                  stride);
+    /* clang-format on */
 
     if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
         err = -ENOMEM;

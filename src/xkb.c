@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 
+#include <sys/mman.h>
+
 #include "xkb.h"
 
 void xkb_init(struct xkb *xkb)
@@ -88,6 +90,22 @@ fail1:
     xkb_context_unref(context);
 fail0:
     return false;
+}
+
+bool xkb_set_wl_keymap(struct xkb *xkb, int fd, size_t size)
+{
+    char *mem;
+    bool ok;
+
+    mem = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+    if (mem == MAP_FAILED)
+        return false;
+
+    ok = xkb_set_keymap(xkb, mem);
+
+    munmap(mem, size);
+
+    return ok;
 }
 
 xkb_keysym_t xkb_get_sym(struct xkb *xkb, uint32_t key)

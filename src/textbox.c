@@ -62,3 +62,8 @@ const char *textbox_str(const struct textbox *tb)
 {
     return tb->input;
 }
+
+size_t textbox_size(const struct textbox *tb)
+{
+    return tb->size;
+}

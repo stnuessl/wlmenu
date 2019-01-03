@@ -131,6 +131,8 @@ static void sort(struct item *list, size_t size)
 
         n *= 2;
     }
+
+    free(buf);
 }
 
 static size_t dedup(struct item *list, size_t size)

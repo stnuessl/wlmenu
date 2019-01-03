@@ -22,28 +22,22 @@
  * SOFTWARE.
  */
 
-#ifndef TEXTBOX_H_
-#define TEXTBOX_H_
+#ifndef CAIRO_UTIL_H_
+#define CAIRO_UTIL_H_
 
-#include <stddef.h>
+#include <stdint.h>
 
-struct textbox {
-    char input[64];
-    size_t size;
+#include <cairo.h>
+
+struct color {
+    double red;
+    double green;
+    double blue;
+    double alpha;
 };
 
-void textbox_init(struct textbox *tb);
+void cairo_util_make_color_u32(uint32_t rgba, struct color *c);
 
-void textbox_destroy(struct textbox *tb);
+void cairo_util_set_source(cairo_t *cairo, const struct color *c);
 
-void textbox_clear(struct textbox *tb);
-
-void textbox_insert(struct textbox *tb, int c);
-
-void textbox_remove(struct textbox *tb);
-
-const char *textbox_str(const struct textbox *tb);
-
-size_t textbox_size(const struct textbox *tb);
-
-#endif /* TEXTBOX_H_ */
+#endif /* CAIRO_UTIL_H_ */
