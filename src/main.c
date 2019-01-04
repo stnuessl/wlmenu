@@ -108,6 +108,8 @@ int main(int argc, char *argv[])
     wlmenu_set_foreground(&wlmenu, 0xff0000ff);
     wlmenu_set_background(&wlmenu, 0x282828ff);
     wlmenu_set_border(&wlmenu, 0xffffffff);
+    wlmenu_set_font(&wlmenu, "/usr/share/fonts/TTF/Hack-Regular.ttf");
+    wlmenu_set_font_size(&wlmenu, 16.0);
     wlmenu_show(&wlmenu);
 
     (void) pthread_join(thread, NULL);

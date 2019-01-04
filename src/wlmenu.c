@@ -30,10 +30,9 @@
 #include <sys/timerfd.h>
 #include <time.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include <cairo-ft.h>
-#include <ft2build.h>
-#include FT_FREETYPE_H
 
 #include "wlmenu.h"
 
@@ -41,106 +40,68 @@
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 
-static void wlmenu_draw_background(struct wlmenu *w)
+static void wlmenu_draw_input(struct wlmenu *w)
 {
-    cairo_t *cairo = framebuffer_cairo(&w->framebuffer);
-
-    cairo_set_source_rgba(cairo, 0.0, 0.0, 0.0, 0.0);
-    cairo_paint(cairo);
-}
-
-static void wlmenu_draw_input_textbox(struct wlmenu *w)
-{
-    cairo_t *cairo = framebuffer_cairo(&w->framebuffer);
-    int32_t max_width = framebuffer_width(&w->framebuffer);
-    int32_t max_height = framebuffer_height(&w->framebuffer);
-
-#if 1
-    FT_Library ft_lib;
-    FT_Face ft_face;
-    cairo_font_face_t *font;
-    cairo_scaled_font_t *scaled_font;
     cairo_glyph_t *glyphs = NULL;
     int n_glyphs = 0;
     cairo_status_t status;
-    size_t size = textbox_size(&w->textbox);
-    cairo_text_extents_t extents;
-    cairo_font_extents_t font_extents;
-    int err;
 
-    err = FT_Init_FreeType(&ft_lib);
-    if (err != 0)
-        die("FT_Init_FreeType()\n");
+    cairo_util_set_source(w->cairo, &w->bg);
 
-    err = FT_New_Face(ft_lib, "/usr/share/fonts/TTF/Hack-Regular.ttf", 0,
-                      &ft_face);
-    if (err != 0)
-        die("FT_New_Face()\n");
+    /* clang-format off */
+    cairo_rectangle(w->cairo, 
+                    w->input_rect_x, 
+                    w->input_rect_y,
+                    w->input_rect_width,
+                    w->input_rect_height);
+    /* clang-format on */
 
-    font = cairo_ft_font_face_create_for_ft_face(ft_face, FT_LOAD_DEFAULT);
-    if (cairo_font_face_status(font) != CAIRO_STATUS_SUCCESS)
+    cairo_fill_preserve(w->cairo);
 
-        cairo_set_font_face(cairo, font);
-    cairo_set_font_size(cairo, 16.0);
+    cairo_util_set_source(w->cairo, &w->border);
+    cairo_set_line_width(w->cairo, 1.0);
+    cairo_stroke(w->cairo);
 
-    scaled_font = cairo_get_scaled_font(cairo);
-    if (cairo_scaled_font_status(scaled_font) != CAIRO_STATUS_SUCCESS)
-        die("cairo_scaled_font_create()\n");
-
-    cairo_scaled_font_extents(scaled_font, &font_extents);
-
-    int32_t width = max_width / 3;
-    int32_t height = font_extents.height * 2 - font_extents.height / 2;
-    int32_t x = (max_width - width) / 2;
-    int32_t y = (max_height - height) / 2;
-
-    cairo_util_set_source(cairo, &w->bg);
-    cairo_rectangle(cairo, x, y, width, height);
-    cairo_fill_preserve(cairo);
-
-    cairo_util_set_source(cairo, &w->border);
-    cairo_set_line_width(cairo, 1.0);
-    cairo_stroke(cairo);
-
-    status = cairo_scaled_font_text_to_glyphs(
-        scaled_font, x + font_extents.max_x_advance,
-        y + (height + font_extents.ascent - font_extents.descent) / 2,
-        textbox_str(&w->textbox), size, &glyphs, &n_glyphs, NULL, NULL, NULL);
+    /* clang-format off */
+    status = cairo_scaled_font_text_to_glyphs(cairo_get_scaled_font(w->cairo), 
+                                              w->input_glyph_x, 
+                                              w->input_glyph_y,
+                                              w->input,
+                                              w->len,
+                                              &glyphs,
+                                              &n_glyphs,
+                                              NULL,
+                                              NULL,
+                                              NULL);
+    /* clang-format on */
     if (status != CAIRO_STATUS_SUCCESS)
         die("text_to_glyphs()\n");
 
-    cairo_util_set_source(cairo, &w->fg);
-    cairo_show_glyphs(cairo, glyphs, n_glyphs);
+    cairo_util_set_source(w->cairo, &w->fg);
+    cairo_show_glyphs(w->cairo, glyphs, n_glyphs);
 
     cairo_glyph_free(glyphs);
 
-#if 0
-    cairo_font_face_destroy(font);
-    FT_Done_Face(ft_face);
-    FT_Done_FreeType(ft_lib);
-#endif
-#else
-    cairo_select_font_face(cairo, "Hack", CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cairo, 16.0);
-    cairo_set_source_rgba(cairo, 0.0, 255.0, 0.0, 1.0);
-    cairo_move_to(cairo, x + 20.0, y + 20.0);
-    cairo_show_text(cairo, textbox_str(&w->textbox));
-#endif
-
-    wl_surface_damage_buffer(w->surface, 0, 0, max_width, max_height);
-    //    wl_surface_damage_buffer(w->surface, x, y, width, height);
+    wl_surface_damage_buffer(w->surface,
+                             w->input_rect_x, 
+                             w->input_rect_y,
+                             w->input_rect_width,
+                             w->input_rect_height);
 }
 
-static void wlmenu_draw(struct wlmenu *w)
+static void wlmenu_draw_menu(struct wlmenu *w)
+{
+}
+
+static void wlmenu_draw_gui(struct wlmenu *w)
 {
     if (!w->released) {
         w->dirty = true;
         return;
     }
 
-    wlmenu_draw_background(w);
-    wlmenu_draw_input_textbox(w);
+    wlmenu_draw_input(w);
+    wlmenu_draw_menu(w);
 
     wl_surface_attach(w->surface, w->buffer, 0, 0);
     wl_surface_commit(w->surface);
@@ -148,16 +109,18 @@ static void wlmenu_draw(struct wlmenu *w)
     w->released = false;
 }
 
+
 static void buffer_release(void *data, struct wl_buffer *buffer)
 {
     struct wlmenu *w = data;
 
-    (void) buffer;
+    if (w->buffer != buffer)
+        die("wl_buffer_release(): Invalid buffer object\n");
 
     w->released = true;
 
     if (w->dirty) {
-        wlmenu_draw(w);
+        wlmenu_draw_gui(w);
         w->dirty = false;
     }
 }
@@ -209,8 +172,11 @@ static void shell_surface_configure(void *data,
                                     int32_t height)
 {
     struct wlmenu *w = data;
+    cairo_surface_t *surface;
+    cairo_font_face_t *font;
+    cairo_scaled_font_t *scaled_font;
+    cairo_font_extents_t extents;
     struct wl_shm_pool *pool;
-    int32_t current_width, current_height;
     int fd, err;
 
     (void) edges;
@@ -218,49 +184,112 @@ static void shell_surface_configure(void *data,
     if (w->shell_surface != shell_surface)
         die("shell_surface_configure(): invalid shell surface\n");
 
-    current_width = framebuffer_width(&w->framebuffer);
-    current_height = framebuffer_height(&w->framebuffer);
-
-    if (current_width == width && current_height == height)
+    if (w->width == width && w->height == height)
         return;
 
     if (width < 0 || height < 0)
         die("Invalid window configuration parameters\n");
 
+    if (w->cairo)
+        cairo_destroy(w->cairo);
+    
     if (w->buffer)
         wl_buffer_destroy(w->buffer);
+
+    if (w->mem)
+        munmap(w->mem, w->size);
+
+    w->stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
+    if (w->stride < 0)
+        die("Invalid window stride configuration\n");
+
+    w->size = w->stride * height;
+    w->width = width;
+    w->height = height;
 
     fd = memfd_create("wlmenu-shm", MFD_CLOEXEC);
     if (fd < 0)
         die_error(errno, "Failed to create shared memory region");
 
-    err = framebuffer_configure(&w->framebuffer, fd, width, height,
-                                CAIRO_FORMAT_ARGB32);
+    err = ftruncate(fd, w->size);
     if (err < 0)
-        die_error(-err, "Failed to configure framebuffer");
+        die_error(errno, "ftruncate(): Failed to resize shared memory region");
 
-    pool = wl_shm_create_pool(w->shm, fd, framebuffer_size(&w->framebuffer));
+    w->mem = mmap(NULL, w->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (w->mem == MAP_FAILED)
+        die_error(errno, "mmap(): Failed to memory map shared memory region");
+
+    pool = wl_shm_create_pool(w->shm, fd, w->size);
     if (!pool)
-        die("Failed to share framebuffer with display manager\n");
+        die("Failed to create shared memory pool\n");
 
     /* clang-format off */
     w->buffer = wl_shm_pool_create_buffer(pool,
                                           0,
-                                          framebuffer_width(&w->framebuffer),
-                                          framebuffer_height(&w->framebuffer),
-                                          framebuffer_stride(&w->framebuffer),
+                                          w->width,
+                                          w->height,
+                                          w->stride,
                                           WL_SHM_FORMAT_ARGB8888);
     /* clang-format on */
     if (!w->buffer)
         die("Failed to create buffer for window surface\n");
 
     wl_buffer_add_listener(w->buffer, &buffer_listener, w);
-    w->released = true;
 
+    /* clang-format off */
+    surface = cairo_image_surface_create_for_data(w->mem,
+                                                  CAIRO_FORMAT_ARGB32,
+                                                  w->width,
+                                                  w->height,
+                                                  w->stride);
+    /* clang-format on */
+
+    if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
+        die("Failed to create cairo image surface for rendering to buffer\n");
+
+    w->cairo = cairo_create(surface);
+    if (cairo_status(w->cairo) != CAIRO_STATUS_SUCCESS)
+        die("Failed to create cairo rendering device\n");
+
+    if (!w->ft_face)
+        die("Failed to configure font rendering - no font specified\n");
+
+    if (w->font_size <= 0.0)
+        die("Failed to configure font rendering - invalid font size\n");
+
+    font = cairo_ft_font_face_create_for_ft_face(w->ft_face, FT_LOAD_DEFAULT);
+    if (cairo_font_face_status(font) != CAIRO_STATUS_SUCCESS)
+        die("Failed to create font for rendering\n");
+
+    cairo_set_font_face(w->cairo, font);
+    cairo_set_font_size(w->cairo, w->font_size);
+
+    scaled_font = cairo_get_scaled_font(w->cairo);
+    if (cairo_scaled_font_status(scaled_font) != CAIRO_STATUS_SUCCESS)
+        die("Failed to create scaled font for rendering\n");
+
+    cairo_scaled_font_extents(scaled_font, &extents);
+
+    cairo_font_face_destroy(font);
+    cairo_surface_destroy(surface);
     wl_shm_pool_destroy(pool);
     close(fd);
 
-    wlmenu_draw(w);
+    w->input_rect_width = (ARRAY_SIZE(w->input) + 1) * extents.max_x_advance;
+    w->input_rect_height = 1.5 * extents.height;
+    w->input_rect_x = (w->width - w->input_rect_width) / 2;
+    w->input_rect_y = (w->height - w->input_rect_height) / 2;
+    w->input_glyph_x = w->input_rect_x + extents.max_x_advance;
+    w->input_glyph_y = w->input_rect_y + 
+        (w->input_rect_height + extents.ascent - extents.descent) / 2;
+
+    w->released = true;
+
+    cairo_set_source_rgba(w->cairo, 0.0, 0.0, 0.0, 0.0);
+    cairo_paint(w->cairo);
+
+    wl_surface_damage_buffer(w->surface, 0, 0, w->width, w->height);
+    wlmenu_draw_gui(w);
 }
 
 static void shell_surface_popup_done(void *data,
@@ -351,7 +380,8 @@ static void wlmenu_dispatch_key_event(struct wlmenu *w, xkb_keysym_t symbol)
         w->quit = true;
         break;
     case XKB_KEY_BackSpace:
-        textbox_remove(&w->textbox);
+        if (w->len)
+            w->input[--w->len] = '\0';
         break;
     case XKB_KEY_Tab:
         break;
@@ -362,11 +392,12 @@ static void wlmenu_dispatch_key_event(struct wlmenu *w, xkb_keysym_t symbol)
     case XKB_KEY_NoSymbol:
         break;
     default:
-        textbox_insert(&w->textbox, (int) symbol);
+        if (isascii((int) symbol) && w->len < ARRAY_SIZE(w->input) - 1)
+            w->input[w->len++] = symbol & 0xff;
         break;
     }
 
-    wlmenu_draw(w);
+    wlmenu_draw_gui(w);
 }
 
 static void keyboard_keymap(void *data,
@@ -459,7 +490,7 @@ static void keyboard_key(void *data,
         its.it_value.tv_sec = 0;
         its.it_value.tv_nsec = w->delay;
 
-        err = timerfd_settime(w->fd_timer, 0, &its, NULL);
+        err = timerfd_settime(w->timer_fd, 0, &its, NULL);
         if (err < 0)
             die_error(errno, "timerfd_settime(): failed to start timer\n");
 
@@ -472,7 +503,7 @@ static void keyboard_key(void *data,
         its.it_interval.tv_sec = 0;
         its.it_interval.tv_nsec = 0;
 
-        err = timerfd_settime(w->fd_timer, 0, &its, NULL);
+        err = timerfd_settime(w->timer_fd, 0, &its, NULL);
         if (err < 0)
             die_error(errno, "timerfd_settime(): failed to cancel timer\n");
 
@@ -659,7 +690,7 @@ static void wlmenu_repeat_key(struct wlmenu *w)
     uint64_t val;
     ssize_t size;
 
-    size = read(w->fd_timer, &val, sizeof(val));
+    size = read(w->timer_fd, &val, sizeof(val));
     if (size != sizeof(val))
         return;
 
@@ -706,13 +737,15 @@ wlmenu_add_epoll_event(struct wlmenu *w, int fd, struct wlmenu_event *event)
     ev.events = EPOLLIN;
     ev.data.ptr = event;
 
-    err = epoll_ctl(w->fd_epoll, EPOLL_CTL_ADD, fd, &ev);
+    err = epoll_ctl(w->epoll_fd, EPOLL_CTL_ADD, fd, &ev);
     if (err < 0)
         die_error(errno, "epoll_ctl()");
 }
 
 void wlmenu_init(struct wlmenu *w, const char *display_name)
 {
+    FT_Error err;
+
     memset(w, 0, sizeof(*w));
 
     xkb_init(&w->xkb);
@@ -758,28 +791,31 @@ void wlmenu_init(struct wlmenu *w, const char *display_name)
     wl_surface_add_listener(w->surface, &surface_listener, w);
     wl_shell_surface_add_listener(w->shell_surface, &shell_surface_listener, w);
 
-    framebuffer_init(&w->framebuffer);
-    textbox_init(&w->textbox);
+    err = FT_Init_FreeType(&w->ft_lib);
+    if (err != 0)
+        die("FT_Init_FreeType(): failed to initialize library - %d\n", err);
 
-    w->fd_epoll = epoll_create1(EPOLL_CLOEXEC);
-    if (w->fd_epoll < 0)
+    w->epoll_fd = epoll_create1(EPOLL_CLOEXEC);
+    if (w->epoll_fd < 0)
         die_error(errno, "epoll_create1()");
 
-    w->fd_timer = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC);
-    if (w->fd_timer < 0)
+    w->timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC);
+    if (w->timer_fd < 0)
         die_error(errno, "timerfd_create()");
 
-    wlmenu_add_epoll_event(w, w->fd_timer, &key_repeat_event);
+    wlmenu_add_epoll_event(w, w->timer_fd, &key_repeat_event);
     wlmenu_add_epoll_event(w, wl_display_get_fd(w->display), &wl_display_event);
 }
 
 void wlmenu_destroy(struct wlmenu *w)
 {
-    close(w->fd_timer);
-    close(w->fd_epoll);
+    close(w->timer_fd);
+    close(w->epoll_fd);
 
-    textbox_destroy(&w->textbox);
-    framebuffer_destroy(&w->framebuffer);
+    if (w->ft_face)
+        FT_Done_Face(w->ft_face);
+
+    FT_Done_Library(w->ft_lib);
 
     if (w->buffer)
         wl_buffer_destroy(w->buffer);
@@ -796,6 +832,23 @@ void wlmenu_destroy(struct wlmenu *w)
     wl_display_disconnect(w->display);
 
     xkb_destroy(&w->xkb);
+}
+
+void wlmenu_set_font(struct wlmenu *w, const char *file)
+{
+    FT_Error err;
+
+    if (w->ft_face)
+        FT_Done_Face(w->ft_face);
+
+    err = FT_New_Face(w->ft_lib, file, 0, &w->ft_face);
+    if (err != 0)
+        die("FT_New_Face(): failed to load font - %d\n", err);
+}
+
+void wlmenu_set_font_size(struct wlmenu *w, double font_size)
+{
+    w->font_size = font_size;
 }
 
 void wlmenu_set_window_title(struct wlmenu *w, const char *title)
@@ -835,7 +888,7 @@ void wlmenu_mainloop(struct wlmenu *w)
     while (!w->quit) {
         wl_display_flush(w->display);
 
-        int n = epoll_wait(w->fd_epoll, events, ARRAY_SIZE(events), -1);
+        int n = epoll_wait(w->epoll_fd, events, ARRAY_SIZE(events), -1);
         if (n < 0 && errno != EINTR)
             die_error(errno, "epoll_wait()");
 

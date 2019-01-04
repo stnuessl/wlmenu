@@ -26,17 +26,18 @@
 #define WLMENU_H_
 
 #include <wayland-client.h>
-
-#include "xdg-shell/xdg-shell-client.h"
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_MODULE_H
+#include <cairo.h>
 
 #include "cairo-util.h"
-#include "framebuffer.h"
-#include "textbox.h"
 #include "xkb.h"
 
 struct wlmenu {
     struct xkb xkb;
 
+    /* Wayland globals */
     struct wl_display *display;
     struct wl_registry *registry;
     struct wl_compositor *compositor;
@@ -46,25 +47,57 @@ struct wlmenu {
     struct wl_seat *seat;
     struct wl_keyboard *keyboard;
     struct wl_output *output;
+    
+    /* Window related wayland objects */
     struct wl_surface *surface;
     struct wl_shell_surface *shell_surface;
     struct wl_buffer *buffer;
 
-    struct framebuffer framebuffer;
-    struct textbox textbox;
-
+    /* Wayland protocol freshness value */
     uint32_t serial;
 
+    /* Font configuration related objects */
+    FT_Library ft_lib;
+    FT_Face ft_face;
+    double font_size;
+
+    /* Framebuffer configuration */
+    void *mem;
+    size_t size;
+
+    int32_t width;
+    int32_t height;
+    int32_t stride;
+
+    /* Cairo for rendering */
+    cairo_t *cairo;
+
+    /* Coordinates for rendering */
+    int32_t input_rect_x;
+    int32_t input_rect_y;
+    int32_t input_rect_width;
+    int32_t input_rect_height;
+    int32_t input_glyph_x;
+    int32_t input_glyph_y;
+
+    cairo_font_extents_t font_extents;
+
+    /* Text input */
+    char input[32];
+    size_t len;
+
+    /* Keyboard configuration */
     int32_t rate;
     int32_t delay;
     xkb_keysym_t symbol;
 
+    /* Color settings */
     struct color fg;
     struct color bg;
     struct color border;
 
-    int fd_epoll;
-    int fd_timer;
+    int epoll_fd;
+    int timer_fd;
 
     uint8_t show : 1;
     uint8_t released : 1;
@@ -75,6 +108,10 @@ struct wlmenu {
 void wlmenu_init(struct wlmenu *w, const char *display_name);
 
 void wlmenu_destroy(struct wlmenu *w);
+
+void wlmenu_set_font(struct wlmenu *w, const char *file);
+
+void wlmenu_set_font_size(struct wlmenu *w, double font_size);
 
 void wlmenu_set_window_title(struct wlmenu *w, const char *title);
 
