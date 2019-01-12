@@ -32,77 +32,25 @@
 #include <unistd.h>
 #include <ctype.h>
 
-#include <cairo-ft.h>
-
 #include "wlmenu.h"
 
 #include "proc-util.h"
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
+#define ARRAY_SIZE(x) (sizeof((x)) / sizeof(*(x)))
 
-static void wlmenu_draw_input(struct wlmenu *w)
+static void wlmenu_draw(struct wlmenu *w)
 {
-    cairo_glyph_t *glyphs = NULL;
-    int n_glyphs = 0;
-    cairo_status_t status;
+    struct rectangle a;
 
-    cairo_util_set_source(w->cairo, &w->bg);
-
-    /* clang-format off */
-    cairo_rectangle(w->cairo, 
-                    w->input_rect_x, 
-                    w->input_rect_y,
-                    w->input_rect_width,
-                    w->input_rect_height);
-    /* clang-format on */
-
-    cairo_fill_preserve(w->cairo);
-
-    cairo_util_set_source(w->cairo, &w->border);
-    cairo_set_line_width(w->cairo, 1.0);
-    cairo_stroke(w->cairo);
-
-    /* clang-format off */
-    status = cairo_scaled_font_text_to_glyphs(cairo_get_scaled_font(w->cairo), 
-                                              w->input_glyph_x, 
-                                              w->input_glyph_y,
-                                              w->input,
-                                              w->len,
-                                              &glyphs,
-                                              &n_glyphs,
-                                              NULL,
-                                              NULL,
-                                              NULL);
-    /* clang-format on */
-    if (status != CAIRO_STATUS_SUCCESS)
-        die("text_to_glyphs()\n");
-
-    cairo_util_set_source(w->cairo, &w->fg);
-    cairo_show_glyphs(w->cairo, glyphs, n_glyphs);
-
-    cairo_glyph_free(glyphs);
-
-    wl_surface_damage_buffer(w->surface,
-                             w->input_rect_x, 
-                             w->input_rect_y,
-                             w->input_rect_width,
-                             w->input_rect_height);
-}
-
-static void wlmenu_draw_menu(struct wlmenu *w)
-{
-}
-
-static void wlmenu_draw_gui(struct wlmenu *w)
-{
     if (!w->released) {
         w->dirty = true;
         return;
     }
 
-    wlmenu_draw_input(w);
-    wlmenu_draw_menu(w);
-
+    widget_draw(&w->widget);
+    widget_area(&w->widget, &a);
+    
+    wl_surface_damage_buffer(w->surface, a.x, a.y, a.width, a.height);
     wl_surface_attach(w->surface, w->buffer, 0, 0);
     wl_surface_commit(w->surface);
 
@@ -120,7 +68,7 @@ static void buffer_release(void *data, struct wl_buffer *buffer)
     w->released = true;
 
     if (w->dirty) {
-        wlmenu_draw_gui(w);
+        wlmenu_draw(w);
         w->dirty = false;
     }
 }
@@ -172,10 +120,6 @@ static void shell_surface_configure(void *data,
                                     int32_t height)
 {
     struct wlmenu *w = data;
-    cairo_surface_t *surface;
-    cairo_font_face_t *font;
-    cairo_scaled_font_t *scaled_font;
-    cairo_font_extents_t extents;
     struct wl_shm_pool *pool;
     int fd, err;
 
@@ -189,9 +133,6 @@ static void shell_surface_configure(void *data,
 
     if (width < 0 || height < 0)
         die("Invalid window configuration parameters\n");
-
-    if (w->cairo)
-        cairo_destroy(w->cairo);
     
     if (w->buffer)
         wl_buffer_destroy(w->buffer);
@@ -236,60 +177,16 @@ static void shell_surface_configure(void *data,
 
     wl_buffer_add_listener(w->buffer, &buffer_listener, w);
 
-    /* clang-format off */
-    surface = cairo_image_surface_create_for_data(w->mem,
-                                                  CAIRO_FORMAT_ARGB32,
-                                                  w->width,
-                                                  w->height,
-                                                  w->stride);
-    /* clang-format on */
 
-    if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
-        die("Failed to create cairo image surface for rendering to buffer\n");
+    widget_configure(&w->widget, w->mem, w->width, w->height, w->stride);
 
-    w->cairo = cairo_create(surface);
-    if (cairo_status(w->cairo) != CAIRO_STATUS_SUCCESS)
-        die("Failed to create cairo rendering device\n");
-
-    if (!w->ft_face)
-        die("Failed to configure font rendering - no font specified\n");
-
-    if (w->font_size <= 0.0)
-        die("Failed to configure font rendering - invalid font size\n");
-
-    font = cairo_ft_font_face_create_for_ft_face(w->ft_face, FT_LOAD_DEFAULT);
-    if (cairo_font_face_status(font) != CAIRO_STATUS_SUCCESS)
-        die("Failed to create font for rendering\n");
-
-    cairo_set_font_face(w->cairo, font);
-    cairo_set_font_size(w->cairo, w->font_size);
-
-    scaled_font = cairo_get_scaled_font(w->cairo);
-    if (cairo_scaled_font_status(scaled_font) != CAIRO_STATUS_SUCCESS)
-        die("Failed to create scaled font for rendering\n");
-
-    cairo_scaled_font_extents(scaled_font, &extents);
-
-    cairo_font_face_destroy(font);
-    cairo_surface_destroy(surface);
     wl_shm_pool_destroy(pool);
     close(fd);
 
-    w->input_rect_width = (ARRAY_SIZE(w->input) + 1) * extents.max_x_advance;
-    w->input_rect_height = 1.5 * extents.height;
-    w->input_rect_x = (w->width - w->input_rect_width) / 2;
-    w->input_rect_y = (w->height - w->input_rect_height) / 2;
-    w->input_glyph_x = w->input_rect_x + extents.max_x_advance;
-    w->input_glyph_y = w->input_rect_y + 
-        (w->input_rect_height + extents.ascent - extents.descent) / 2;
-
     w->released = true;
 
-    cairo_set_source_rgba(w->cairo, 0.0, 0.0, 0.0, 0.0);
-    cairo_paint(w->cairo);
-
     wl_surface_damage_buffer(w->surface, 0, 0, w->width, w->height);
-    wlmenu_draw_gui(w);
+    wlmenu_draw(w);
 }
 
 static void shell_surface_popup_done(void *data,
@@ -373,31 +270,85 @@ const struct wl_output_listener output_listener = {
     .scale = &output_scale,
 };
 
+static void wlmenu_select_items(struct wlmenu *w)
+{
+    const char *input = widget_input_str(&w->widget);
+    size_t len = widget_input_strlen(&w->widget);
+
+    widget_clear_rows(&w->widget);
+
+    if (!len) {
+        for (size_t i = 0; i < w->n; ++i) {
+            w->items[i].hits = 0;
+
+            if (widget_has_empty_row(&w->widget))
+                widget_insert_row(&w->widget, w->items[i].name);
+        }
+
+        return;
+    }
+
+    for (size_t i = 0; i < w->n; ++i) {
+        int diff = len - w->items[i].hits;
+
+        if (abs(diff) == 1 && strcasestr(w->items[i].name, input))
+            w->items[i].hits = len;
+
+        if (w->items[i].hits == len && widget_has_empty_row(&w->widget))
+            widget_insert_row(&w->widget, w->items[i].name);
+    }
+}
+
+__attribute__((noreturn))
+static void wlmenu_launch_item(const struct wlmenu *w)
+{
+    const char *file;
+    char *args[2];
+
+    file = widget_highlight(&w->widget);
+    if (!file)
+        exit(EXIT_SUCCESS);
+
+    args[0] = strdupa(file);
+    args[1] = NULL;
+
+    execvp(file, args);
+
+    die_error(errno, "Failed to execute \"%s\"", file);
+}
+
 static void wlmenu_dispatch_key_event(struct wlmenu *w, xkb_keysym_t symbol)
 {
     switch (symbol) {
-    case XKB_KEY_Return:
+    case XKB_KEY_Escape:
         w->quit = true;
         break;
+    case XKB_KEY_Return:
+        wlmenu_launch_item(w);
+        break;
     case XKB_KEY_BackSpace:
-        if (w->len)
-            w->input[--w->len] = '\0';
+        widget_remove_char(&w->widget);
+
+        wlmenu_select_items(w);
+        break;
+    case XKB_KEY_ISO_Left_Tab:
+    case XKB_KEY_Up:
+        widget_highlight_up(&w->widget);
         break;
     case XKB_KEY_Tab:
-        break;
-    case XKB_KEY_Up:
-        break;
     case XKB_KEY_Down:
+        widget_highlight_down(&w->widget);
         break;
     case XKB_KEY_NoSymbol:
         break;
     default:
-        if (isascii((int) symbol) && w->len < ARRAY_SIZE(w->input) - 1)
-            w->input[w->len++] = symbol & 0xff;
+        widget_insert_char(&w->widget, (int) symbol);
+        
+        wlmenu_select_items(w);
         break;
     }
 
-    wlmenu_draw_gui(w);
+    wlmenu_draw(w);
 }
 
 static void keyboard_keymap(void *data,
@@ -744,8 +695,6 @@ wlmenu_add_epoll_event(struct wlmenu *w, int fd, struct wlmenu_event *event)
 
 void wlmenu_init(struct wlmenu *w, const char *display_name)
 {
-    FT_Error err;
-
     memset(w, 0, sizeof(*w));
 
     xkb_init(&w->xkb);
@@ -791,9 +740,7 @@ void wlmenu_init(struct wlmenu *w, const char *display_name)
     wl_surface_add_listener(w->surface, &surface_listener, w);
     wl_shell_surface_add_listener(w->shell_surface, &shell_surface_listener, w);
 
-    err = FT_Init_FreeType(&w->ft_lib);
-    if (err != 0)
-        die("FT_Init_FreeType(): failed to initialize library - %d\n", err);
+    widget_init(&w->widget);
 
     w->epoll_fd = epoll_create1(EPOLL_CLOEXEC);
     if (w->epoll_fd < 0)
@@ -812,13 +759,13 @@ void wlmenu_destroy(struct wlmenu *w)
     close(w->timer_fd);
     close(w->epoll_fd);
 
-    if (w->ft_face)
-        FT_Done_Face(w->ft_face);
-
-    FT_Done_Library(w->ft_lib);
-
     if (w->buffer)
         wl_buffer_destroy(w->buffer);
+
+    if (w->mem)
+        munmap(w->mem, w->size);
+
+    widget_destroy(&w->widget);
 
     wl_shell_surface_destroy(w->shell_surface);
     wl_surface_destroy(w->surface);
@@ -834,23 +781,6 @@ void wlmenu_destroy(struct wlmenu *w)
     xkb_destroy(&w->xkb);
 }
 
-void wlmenu_set_font(struct wlmenu *w, const char *file)
-{
-    FT_Error err;
-
-    if (w->ft_face)
-        FT_Done_Face(w->ft_face);
-
-    err = FT_New_Face(w->ft_lib, file, 0, &w->ft_face);
-    if (err != 0)
-        die("FT_New_Face(): failed to load font - %d\n", err);
-}
-
-void wlmenu_set_font_size(struct wlmenu *w, double font_size)
-{
-    w->font_size = font_size;
-}
-
 void wlmenu_set_window_title(struct wlmenu *w, const char *title)
 {
     wl_shell_surface_set_title(w->shell_surface, title);
@@ -861,19 +791,18 @@ void wlmenu_set_window_class(struct wlmenu *w, const char *name)
     wl_shell_surface_set_class(w->shell_surface, name);
 }
 
-void wlmenu_set_foreground(struct wlmenu *w, uint32_t rgba)
+struct widget *wlmenu_widget(struct wlmenu *w)
 {
-    cairo_util_make_color_u32(rgba, &w->fg);
+    return &w->widget;
 }
 
-void wlmenu_set_background(struct wlmenu *w, uint32_t rgba)
+void wlmenu_set_items(struct wlmenu *w, struct item *items, size_t size)
 {
-    cairo_util_make_color_u32(rgba, &w->bg);
-}
+    w->items = items;
+    w->n = size;
 
-void wlmenu_set_border(struct wlmenu *w, uint32_t rgba)
-{
-    cairo_util_make_color_u32(rgba, &w->border);
+    for (size_t i = 0; i < w->n && widget_has_empty_row(&w->widget); ++i)
+        widget_insert_row(&w->widget, w->items[i].name);
 }
 
 void wlmenu_show(struct wlmenu *w)

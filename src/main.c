@@ -92,6 +92,7 @@ static int make_directories(const char *path, mode_t mode)
 
 int main(int argc, char *argv[])
 {
+    struct widget *widget;
     pthread_t thread;
     int err;
 
@@ -105,14 +106,20 @@ int main(int argc, char *argv[])
 
     wlmenu_init(&wlmenu, NULL);
     wlmenu_set_window_title(&wlmenu, "wlmenu");
-    wlmenu_set_foreground(&wlmenu, 0xff0000ff);
-    wlmenu_set_background(&wlmenu, 0x282828ff);
-    wlmenu_set_border(&wlmenu, 0xffffffff);
-    wlmenu_set_font(&wlmenu, "/usr/share/fonts/TTF/Hack-Regular.ttf");
-    wlmenu_set_font_size(&wlmenu, 16.0);
+    
+    widget = wlmenu_widget(&wlmenu);
+    widget_set_foreground(widget, 0xaf8700ff);
+    widget_set_background(widget, 0x282828ff);
+    widget_set_border(widget, 0xaf8700ff);
+    widget_set_font(widget, "/usr/share/fonts/TTF/Hack-Regular.ttf");
+    widget_set_font_size(widget, 16.0);
+    widget_set_max_rows(widget, 12);
+
     wlmenu_show(&wlmenu);
 
     (void) pthread_join(thread, NULL);
+
+    wlmenu_set_items(&wlmenu, list, size);
 
     printf("Entering dispatch mode\n");
 

@@ -25,9 +25,11 @@
 #ifndef LOAD_H_
 #define LOAD_H_
 
+#include <stdint.h>
+
 struct item {
     char *name;
-    unsigned int hits;
+    size_t hits;
 };
 
 size_t load(struct item **list);
