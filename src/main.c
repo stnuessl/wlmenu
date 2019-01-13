@@ -113,9 +113,11 @@ int main(int argc, char *argv[])
     wlmenu_set_window_title(&wlmenu, "wlmenu");
     
     widget = wlmenu_widget(&wlmenu);
-    widget_set_foreground(widget, 0xaf8700ff);
+    widget_set_foreground(widget, 0xccccccff);
     widget_set_background(widget, 0x282828ff);
-    widget_set_border(widget, 0xaf8700ff);
+    widget_set_highlight_foreground(widget, 0xaf8700ff);
+    widget_set_highlight_background(widget, 0x1d1d1dff);
+    widget_set_border(widget, 0xccccccff);
     widget_set_font(widget, "/usr/share/fonts/TTF/Hack-Regular.ttf");
     widget_set_font_size(widget, 16.0);
     widget_set_max_rows(widget, 12);

@@ -113,6 +113,14 @@ xkb_keysym_t xkb_get_sym(struct xkb *xkb, uint32_t key)
     return xkb_state_key_get_one_sym(xkb->state, key + 8);
 }
 
+bool xkb_ctrl_active(const struct xkb *xkb)
+{
+    const char *name = XKB_MOD_NAME_CTRL;
+    enum xkb_state_component type = XKB_STATE_MODS_EFFECTIVE;
+
+    return xkb_state_mod_name_is_active(xkb->state, name, type) > 0;
+}
+
 void xkb_state_update(struct xkb *xkb,
                       uint32_t mods_depressed,
                       uint32_t mods_latched,

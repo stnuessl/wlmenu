@@ -78,6 +78,8 @@ struct widget {
     
     struct color foreground;
     struct color background;
+    struct color highlight_fg;
+    struct color highlight_bg;
     struct color border;
 };
 
@@ -98,6 +100,8 @@ void widget_configure(struct widget *w,
                       int32_t stride);
 
 void widget_draw(struct widget *w);
+
+void widget_clear_input_str(struct widget *w);
 
 const char *widget_input_str(const struct widget *w);
 
@@ -124,6 +128,10 @@ size_t widget_rows(const struct widget *w);
 void widget_set_foreground(struct widget *w, uint32_t rgba);
 
 void widget_set_background(struct widget *w, uint32_t rgba);
+
+void widget_set_highlight_foreground(struct widget *w, uint32_t rgba);
+
+void widget_set_highlight_background(struct widget *w, uint32_t rgba);
 
 void widget_set_border(struct widget *w, uint32_t rgba);
 

@@ -163,11 +163,11 @@ static void widget_draw_output(struct widget *w)
         size_t len = strlen(w->rows[i]);
 
         if (i == w->highlight) {
-            cairo_util_set_source(w->cr, &w->foreground);
+            cairo_util_set_source(w->cr, &w->highlight_bg);
             cairo_rectangle(w->cr, x, y, width, height);
             cairo_fill(w->cr);
             
-            cairo_util_set_source(w->cr, &w->background);
+            cairo_util_set_source(w->cr, &w->highlight_fg);
             widget_show_text(w, x, yh, w->rows[i], len, w->max_glyphs_output); 
         } else {
             cairo_util_set_source(w->cr, &w->background);
@@ -343,6 +343,12 @@ void widget_draw(struct widget *w)
     widget_draw_input(w);
 }
 
+void widget_clear_input_str(struct widget *w)
+{
+    while (w->len)
+        w->str[--w->len] = '\0';
+}
+
 const char *widget_input_str(const struct widget *w)
 {
     return w->str;
@@ -411,6 +417,16 @@ void widget_set_foreground(struct widget *w, uint32_t rgba)
 void widget_set_background(struct widget *w, uint32_t rgba)
 {
     color_set(&w->background, rgba);
+}
+
+void widget_set_highlight_foreground(struct widget *w, uint32_t rgba)
+{
+    color_set(&w->highlight_fg, rgba);
+}
+
+void widget_set_highlight_background(struct widget *w, uint32_t rgba)
+{
+    color_set(&w->highlight_bg, rgba);
 }
 
 void widget_set_border(struct widget *w, uint32_t rgba)
