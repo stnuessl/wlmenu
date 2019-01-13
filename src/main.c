@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "load.h"
 #include "proc-util.h"
@@ -92,13 +93,17 @@ static int make_directories(const char *path, mode_t mode)
 
 int main(int argc, char *argv[])
 {
+    struct timespec begin, end;
     struct widget *widget;
     pthread_t thread;
+    uint64_t elapsed;
     int err;
 
     (void) argc;
     (void) argv;
     (void) &match;
+
+    (void) clock_gettime(CLOCK_MONOTONIC, &begin);
 
     err = pthread_create(&thread, NULL, &thr_load, NULL);
     if (err < 0)
@@ -120,6 +125,13 @@ int main(int argc, char *argv[])
     (void) pthread_join(thread, NULL);
 
     wlmenu_set_items(&wlmenu, list, size);
+
+    (void) clock_gettime(CLOCK_MONOTONIC, &end);
+
+    elapsed = 1000000000ul * (end.tv_sec - begin.tv_sec) 
+            + (end.tv_nsec - begin.tv_nsec);
+
+    printf("Init: %lu us / %lu ms\n", elapsed / 1000, elapsed / 1000000);
 
     printf("Entering dispatch mode\n");
 

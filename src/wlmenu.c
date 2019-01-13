@@ -812,7 +812,9 @@ void wlmenu_show(struct wlmenu *w)
 
 void wlmenu_mainloop(struct wlmenu *w)
 {
+    struct timespec begin, end;
     struct epoll_event events[2];
+    uint64_t elapsed;
 
     while (!w->quit) {
         wl_display_flush(w->display);
@@ -821,7 +823,18 @@ void wlmenu_mainloop(struct wlmenu *w)
         if (n < 0 && errno != EINTR)
             die_error(errno, "epoll_wait()");
 
+        printf("Processing %d event(s)...   ", n);
+
+        (void) clock_gettime(CLOCK_MONOTONIC, &begin);
+
         while (n--)
             ((struct wlmenu_event *) events[n].data.ptr)->run(w);
+
+        (void) clock_gettime(CLOCK_MONOTONIC, &end);
+
+        elapsed = 1000000000ul * (end.tv_sec - begin.tv_sec)
+                + (end.tv_nsec - begin.tv_nsec);
+
+        printf("%lu us / %lu ms\n", elapsed / 1000, elapsed / 1000000);
     }
 }
