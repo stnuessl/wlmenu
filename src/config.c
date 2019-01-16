@@ -24,7 +24,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-
+#if 0
 #include "config.h"
 
 void config_init(struct config *c)
@@ -56,4 +56,4 @@ double config_get_as_double(const struct config *config, const char *key)
 int config_get_as_int(const struct config *config, const char *key)
 {
 }
-
+#endif

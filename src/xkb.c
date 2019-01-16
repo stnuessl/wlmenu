@@ -130,3 +130,9 @@ void xkb_state_update(struct xkb *xkb,
     (void) xkb_state_update_mask(xkb->state, mods_depressed, mods_latched,
                                  mods_locked, 0u, 0u, group);
 }
+
+bool xkb_keysym_is_modifier(xkb_keysym_t symbol)
+{
+   return symbol >= XKB_KEY_Shift_L && symbol <= XKB_KEY_Hyper_R;
+}
+

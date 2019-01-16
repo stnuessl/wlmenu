@@ -55,4 +55,6 @@ void xkb_state_update(struct xkb *xkb,
                       uint32_t mods_locked,
                       uint32_t group);
 
+bool xkb_keysym_is_modifier(xkb_keysym_t symbol);
+
 #endif /* XKB_H_ */

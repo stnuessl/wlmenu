@@ -319,6 +319,21 @@ static void wlmenu_launch_item(const struct wlmenu *w)
 
 static void wlmenu_dispatch_key_event(struct wlmenu *w, xkb_keysym_t symbol)
 {
+    if (xkb_ctrl_active(&w->xkb)) {
+        switch (symbol) {
+        case XKB_KEY_w:
+            widget_clear_input_str(&w->widget);
+
+            wlmenu_select_items(w);
+            break;
+        default:
+            break;
+        }
+
+        wlmenu_draw(w);
+        return;
+    }
+
     switch (symbol) {
     case XKB_KEY_Escape:
         w->quit = true;
@@ -341,13 +356,6 @@ static void wlmenu_dispatch_key_event(struct wlmenu *w, xkb_keysym_t symbol)
         break;
     case XKB_KEY_NoSymbol:
         break;
-    case XKB_KEY_w:
-        if (xkb_ctrl_active(&w->xkb)) {
-            widget_clear_input_str(&w->widget);
-
-            wlmenu_select_items(w);
-            break;
-        }
     default:
         widget_insert_char(&w->widget, (int) symbol);
         
@@ -426,7 +434,6 @@ static void keyboard_key(void *data,
     int err;
 
     (void) keyboard;
-    (void) serial;
     (void) time;
 
     if (serial <= w->serial)
@@ -437,10 +444,14 @@ static void keyboard_key(void *data,
     if (!xkb_keymap_ok(&w->xkb))
         return;
 
+    symbol = xkb_get_sym(&w->xkb, key);
+
+    /* Modifier keys are handled by the "keyboard_modifiers" function */ 
+    if (xkb_keysym_is_modifier(symbol))
+        return;
+
     switch (state) {
     case WL_KEYBOARD_KEY_STATE_PRESSED:
-        symbol = xkb_get_sym(&w->xkb, key);
-
         wlmenu_dispatch_key_event(w, symbol);
 
         its.it_interval.tv_sec = 0;
@@ -455,16 +466,21 @@ static void keyboard_key(void *data,
         w->symbol = symbol;
         break;
     case WL_KEYBOARD_KEY_STATE_RELEASED:
+        /* 
+         * If multiple keys are pressed down the last pressed button 
+         * is effectivly in control of the key repeat timer. 
+         * The timer has to be stopped on the keys release.
+         */ 
+        if (symbol == w->symbol) {
+            its.it_value.tv_sec = 0;
+            its.it_value.tv_nsec = 0;
+            its.it_interval.tv_sec = 0;
+            its.it_interval.tv_nsec = 0;
 
-        its.it_value.tv_sec = 0;
-        its.it_value.tv_nsec = 0;
-        its.it_interval.tv_sec = 0;
-        its.it_interval.tv_nsec = 0;
-
-        err = timerfd_settime(w->timer_fd, 0, &its, NULL);
-        if (err < 0)
-            die_error(errno, "timerfd_settime(): failed to cancel timer\n");
-
+            err = timerfd_settime(w->timer_fd, 0, &its, NULL);
+            if (err < 0)
+                die_error(errno, "timerfd_settime(): failed to cancel timer\n");
+        }
         break;
     default:
         break;
@@ -820,6 +836,8 @@ void wlmenu_show(struct wlmenu *w)
 void wlmenu_mainloop(struct wlmenu *w)
 {
     struct epoll_event events[2];
+    struct timespec begin, end;
+    uint64_t elapsed;
 
     while (!w->quit) {
         wl_display_flush(w->display);
@@ -828,7 +846,18 @@ void wlmenu_mainloop(struct wlmenu *w)
         if (n < 0 && errno != EINTR)
             die_error(errno, "epoll_wait()");
 
+        printf("Processing %d event(s)... ", n);
+
+        clock_gettime(CLOCK_MONOTONIC, &begin);
+
         while (n--)
             ((struct wlmenu_event *) events[n].data.ptr)->run(w);
+
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        
+        elapsed = 1000000000ul * (end.tv_sec - begin.tv_sec)
+                + (end.tv_nsec - begin.tv_nsec);
+
+        printf("%lu us / %lu ms\n", elapsed / 1000, elapsed / 1000000);
     }
 }

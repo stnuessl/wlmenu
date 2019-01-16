@@ -373,6 +373,9 @@ void widget_remove_char(struct widget *w)
 
 const char *widget_highlight(const struct widget *w)
 {
+    if (!w->n_rows)
+        return NULL;
+
     return w->rows[w->highlight];
 }
 
