@@ -210,8 +210,13 @@ static void widget_draw_input(struct widget *w)
     cairo_util_set_source(w->cr, &w->border);
     cairo_set_line_width(w->cr, 2.0);
     cairo_stroke(w->cr);
-    
+
+    w->str[w->len++] = '_';
+
+    cairo_util_set_source(w->cr, &w->foreground);
     widget_show_text(w, x, y, w->str, w->len, w->max_glyphs_input);
+    
+    w->str[--w->len] = '\0';
 }
 
 void widget_init(struct widget *w)
