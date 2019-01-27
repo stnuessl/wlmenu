@@ -28,13 +28,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stropts.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <fcntl.h>
 
 #include "load.h"
 #include "proc-util.h"
+#include "config.h"
 #include "wlmenu.h"
 
 static struct wlmenu wlmenu;
@@ -44,64 +47,30 @@ static size_t size;
 static void *thr_load(void *arg)
 {
     (void) arg;
-
-    size = load(&list);
-
-    return NULL;
-}
-
-static void match(const char *str, struct item *list, size_t size)
-{
-    size_t len = strlen(str);
-    if (!len)
-        return;
-
-    for (size_t i = 0; i < size; ++i) {
-        int diff = (unsigned int) len - list[i].hits;
-
-        if (abs(diff) == 1 && strstr(list[i].name, str))
-            list[i].hits = (unsigned int) len;
-    }
-}
-
-#if 0
-static int make_directories(const char *path, mode_t mode)
-{
-
-    char *dup = strdupa(path);
     
-    for (char *p = dup; *p != '\0'; ++p) {
-        if (*p == '/') {
-            int err;
+    load(&list, &size);
 
-            *p = '\0';
-
-            err = mkdir(dup, mode);
-            if (err < 0 && errno != EEXIST)
-                return -errno;
-
-            *p = '/';
-
-            while (*p != 0 && *p++ == '/')
-                ;
-        }
-    }
-
-    return 0;
+    pthread_exit(NULL);
 }
-#endif
+
+/* 
+ * TODO: Command-line arguments
+ *   --rows
+ *   --fg, --bg, --border, --highlight-fg, --highlight-bg
+ *   --font, --font-size
+ */
 
 int main(int argc, char *argv[])
 {
     struct timespec begin, end;
     struct widget *widget;
+    struct config conf;
     pthread_t thread;
     uint64_t elapsed;
     int err;
 
     (void) argc;
     (void) argv;
-    (void) &match;
 
     (void) clock_gettime(CLOCK_MONOTONIC, &begin);
 
@@ -109,18 +78,20 @@ int main(int argc, char *argv[])
     if (err < 0)
         die("Failed to load runnable applications\n");
 
+    config_init(&conf);
+
     wlmenu_init(&wlmenu, NULL);
     wlmenu_set_window_title(&wlmenu, "wlmenu");
     
     widget = wlmenu_widget(&wlmenu);
-    widget_set_foreground(widget, 0xccccccff);
-    widget_set_background(widget, 0x282828ff);
-    widget_set_highlight_foreground(widget, 0xaf8700ff);
-    widget_set_highlight_background(widget, 0x1d1d1dff);
-    widget_set_border(widget, 0xccccccff);
+    widget_set_foreground(widget, conf.color_fg);
+    widget_set_background(widget, conf.color_bg);
+    widget_set_highlight_foreground(widget, conf.color_highlight_fg);
+    widget_set_highlight_background(widget, conf.color_highlight_bg);
+    widget_set_border(widget, conf.color_border);
     widget_set_font(widget, "/usr/share/fonts/TTF/Hack-Regular.ttf");
     widget_set_font_size(widget, 16.0);
-    widget_set_max_rows(widget, 12);
+    widget_set_max_rows(widget, conf.rows);
 
     wlmenu_show(&wlmenu);
 
@@ -140,6 +111,7 @@ int main(int argc, char *argv[])
     wlmenu_mainloop(&wlmenu);
 
     wlmenu_destroy(&wlmenu);
+    config_destroy(&conf);
     fprintf(stdout, "Goodbye!\n");
 
     return EXIT_SUCCESS;

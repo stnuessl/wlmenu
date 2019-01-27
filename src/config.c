@@ -24,25 +24,70 @@
 
 #include <stdlib.h>
 #include <string.h>
-#if 0
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+
+#include "proc-util.h"
 #include "config.h"
+#include "xmalloc.h"
+
+static void config_load_from_str(struct config *c, char *str, size_t size)
+{
+}
 
 void config_init(struct config *c)
 {
-     memset(c, 0, sizeof(*c));
+    c->color_fg = 0xffffffff;
+    c->color_bg = 0x000000ff;
+    c->color_border = 0x888888ff;
+    c->color_highlight_fg = 0x000000ff;
+    c->color_highlight_bg = 0xffffffff;
+
+    c->rows = 16;
 }
 
 void config_destroy(struct config *c)
 {
-    if (c->list)
-        free(c->list);
-
-    if (c->mem)
-        free(mem);
+    (void) c;
 }
 
 void config_load(struct config *c, const char *file)
 {
+    struct stat st;
+    char *data;
+    int fd, err;
+    size_t size = 0;
+    
+    fd = open(file, O_RDONLY);
+    if (fd < 0)
+        die_error(errno, "Failed to open configuration file \"%s\"", file);
+
+    err = fstat(fd, &st);
+    if (err < 0)
+        die_error(errno, "stat() failed");
+
+
+    data = xmalloc(st.st_size + 1);
+    
+    do {
+        ssize_t n = read(fd, data + size, st.st_size - size);
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+
+            die_error(errno, "Failed to load configuration file \"%s\"", file);
+        }
+
+        size += n;
+    } while (size < (size_t) st.st_size);
+
+    data[st.st_size] = '\0';
+
+    config_load_from_str(c, data, size);
+
+    free(data);
+    close(fd);
 }
 
 const char *config_get(const struct config *config, const char *key)
@@ -56,4 +101,3 @@ double config_get_as_double(const struct config *config, const char *key)
 int config_get_as_int(const struct config *config, const char *key)
 {
 }
-#endif

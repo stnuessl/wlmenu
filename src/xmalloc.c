@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2018 Steffen Nuessle
+ * Copyright (c) 2019 Steffen Nuessle
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,34 @@
  * SOFTWARE.
  */
 
-#ifndef PROC_UTIL_H_
-#define PROC_UTIL_H_
+#include <stdlib.h>
 
-#define die_oom() die("%s(): Failed to allocate memory\n", __func__)
+#include "proc-util.h"
 
-void die(const char *fmt, ...) __attribute__((noreturn, format(printf, 1, 2)));
+void *xmalloc(size_t n)
+{
+    void *mem = malloc(n);
+    if (!mem)
+        die_oom();
 
-void die_error(int err, const char *fmt, ...)
-    __attribute__((noreturn, format(printf, 2, 3)));
+    return mem;
+}
 
-#endif /* PROC_UTIL_H_ */
+void *xcalloc(size_t n, size_t size)
+{
+    void *mem = calloc(n, size);
+    if (!mem)
+        die_oom();
+
+    return mem;
+}
+
+void *xrealloc(void *mem, size_t n)
+{
+    mem = realloc(mem, n);
+    if (!mem)
+        die_oom();
+
+    return mem;
+}
+

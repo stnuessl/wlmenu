@@ -78,8 +78,8 @@ struct widget {
     
     struct color foreground;
     struct color background;
-    struct color highlight_fg;
-    struct color highlight_bg;
+    struct color highlight_foreground;
+    struct color highlight_background;
     struct color border;
 };
 

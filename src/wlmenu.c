@@ -177,7 +177,6 @@ static void shell_surface_configure(void *data,
 
     wl_buffer_add_listener(w->buffer, &buffer_listener, w);
 
-
     widget_configure(&w->widget, w->mem, w->width, w->height, w->stride);
 
     wl_shm_pool_destroy(pool);
@@ -186,7 +185,6 @@ static void shell_surface_configure(void *data,
     w->released = true;
 
     wl_surface_damage_buffer(w->surface, 0, 0, w->width, w->height);
-    wlmenu_draw(w);
 }
 
 static void shell_surface_popup_done(void *data,
@@ -238,12 +236,12 @@ static void output_mode(void *data,
 {
     struct wlmenu *w = data;
 
-    (void) w;
     (void) output;
     (void) flags;
-    (void) width;
-    (void) height;
     (void) refresh;
+
+    shell_surface_configure(w, w->shell_surface, 0, width, height);
+    wlmenu_draw(w);
 }
 
 static void output_done(void *data, struct wl_output *output)
@@ -263,7 +261,7 @@ static void output_scale(void *data, struct wl_output *output, int32_t factor)
     (void) factor;
 }
 
-const struct wl_output_listener output_listener = {
+static const struct wl_output_listener output_listener = {
     .geometry = &output_geometry,
     .mode = &output_mode,
     .done = &output_done,
@@ -325,6 +323,9 @@ static void wlmenu_dispatch_key_event(struct wlmenu *w, xkb_keysym_t symbol)
             widget_clear_input_str(&w->widget);
 
             wlmenu_select_items(w);
+            break;
+        case XKB_KEY_c:
+            exit(EXIT_SUCCESS);
             break;
         default:
             break;
@@ -520,7 +521,7 @@ static void keyboard_repeat_info(void *data,
     w->delay = 1000000 * delay;
 }
 
-const struct wl_keyboard_listener keyboard_listener = {
+static const struct wl_keyboard_listener keyboard_listener = {
     .keymap = &keyboard_keymap,
     .enter = &keyboard_enter,
     .leave = &keyboard_leave,
@@ -601,6 +602,8 @@ wlmenu_bind_output(struct wlmenu *w, uint32_t name, uint32_t version)
     w->output = wl_registry_bind(w->registry, name, interface, version);
     if (!w->output)
         die("Failed to bind to output interface\n");
+
+    wl_output_add_listener(w->output, &output_listener, w);
 }
 
 static void registry_add(void *data,
@@ -657,6 +660,36 @@ registry_remove(void *data, struct wl_registry *registry, uint32_t name)
 static const struct wl_registry_listener registry_listener = {
     .global = &registry_add,
     .global_remove = &registry_remove,
+};
+
+static void display_error(void *data,
+                          struct wl_display *display,
+                          void *object_id,
+                          uint32_t code,
+                          const char *message)
+{
+    struct wlmenu *w = data;
+
+    (void) w;
+    (void) display;
+
+    printf("%s - %d id: 0x%p\n", message, code, object_id);
+}
+
+static void display_delete_id(void *data, 
+                              struct wl_display *display, 
+                              uint32_t id)
+{
+    struct wlmenu *w = data;
+
+    (void) w;
+    (void) display;
+    (void) id;
+}
+
+static struct wl_display_listener display_listener = {
+    .error = &display_error,
+    .delete_id = &display_delete_id,
 };
 
 static void wlmenu_repeat_key(struct wlmenu *w)
@@ -725,6 +758,8 @@ void wlmenu_init(struct wlmenu *w, const char *display_name)
     w->display = wl_display_connect(display_name);
     if (!w->display)
         die_error(errno, "Failed to connect to display manager");
+
+//    wl_display_add_listener(w->display, &display_listener, w);
 
     w->registry = wl_display_get_registry(w->display);
     if (!w->registry)
@@ -830,7 +865,7 @@ void wlmenu_set_items(struct wlmenu *w, struct item *items, size_t size)
 
 void wlmenu_show(struct wlmenu *w)
 {
-    wl_shell_surface_set_maximized(w->shell_surface, NULL);
+    wl_shell_surface_set_toplevel(w->shell_surface);
 }
 
 void wlmenu_mainloop(struct wlmenu *w)
@@ -840,9 +875,11 @@ void wlmenu_mainloop(struct wlmenu *w)
     uint64_t elapsed;
 
     while (!w->quit) {
+        int n;
+
         wl_display_flush(w->display);
 
-        int n = epoll_wait(w->epoll_fd, events, ARRAY_SIZE(events), -1);
+        n = epoll_wait(w->epoll_fd, events, ARRAY_SIZE(events), -1);
         if (n < 0 && errno != EINTR)
             die_error(errno, "epoll_wait()");
 

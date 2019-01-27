@@ -25,10 +25,23 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
+#include <stddef.h>
+#include <stdint.h>
+
 struct config {
     char *mem;
-    char **list;
     size_t n;
+
+    char *font_file;
+    double font_size;
+
+    size_t rows;
+
+    uint32_t color_fg;
+    uint32_t color_bg;
+    uint32_t color_border;
+    uint32_t color_highlight_fg;
+    uint32_t color_highlight_bg;
 };
 
 void config_init(struct config *c);

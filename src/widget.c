@@ -29,6 +29,7 @@
 #include <cairo-ft.h>
 
 #include "widget.h"
+#include "xmalloc.h"
 #include "proc-util.h"
 
 #define ARRAY_SIZE(x) (sizeof((x)) / sizeof(*(x)))
@@ -52,7 +53,6 @@ static void cairo_util_show_glyphs(cairo_t *cairo,
 {
     int n = n_glyphs - max_glyphs;
     if (n > 0) {
-        printf("luled %d, %d, %d\n", n_glyphs, max_glyphs, n);
         int32_t offset = glyphs[n].x - glyphs[0].x;
 
         glyphs += n;
@@ -163,11 +163,11 @@ static void widget_draw_output(struct widget *w)
         size_t len = strlen(w->rows[i]);
 
         if (i == w->highlight) {
-            cairo_util_set_source(w->cr, &w->highlight_bg);
+            cairo_util_set_source(w->cr, &w->highlight_background);
             cairo_rectangle(w->cr, x, y, width, height);
             cairo_fill(w->cr);
             
-            cairo_util_set_source(w->cr, &w->highlight_fg);
+            cairo_util_set_source(w->cr, &w->highlight_foreground);
             widget_show_text(w, x, yh, w->rows[i], len, w->max_glyphs_output); 
         } else {
             cairo_util_set_source(w->cr, &w->background);
@@ -229,18 +229,11 @@ void widget_init(struct widget *w)
     if (err != 0)
         die("FT_Init_FreeType(): FreeType initialization failed - %d\n", err);
 
-    w->rows = malloc(10 * sizeof(*w->rows));
-    if (!w->rows)
-        die("Out of memory\n");
-
+    w->rows = xmalloc(10 * sizeof(*w->rows));
     w->max_rows = 10;
         
-    w->glyphs = malloc(GLYPH_BUFFER_SIZE * sizeof(*w->glyphs));
-    if (!w->glyphs)
-        die("Out of memory\n");
-
+    w->glyphs = xmalloc(GLYPH_BUFFER_SIZE * sizeof(*w->glyphs));
     w->n_glyphs = GLYPH_BUFFER_SIZE;
- 
 }
 
 void widget_destroy(struct widget *w)
@@ -276,10 +269,7 @@ void widget_set_font_size(struct widget *w, double size)
 
 void widget_set_max_rows(struct widget *w, size_t max_rows)
 {
-    w->rows = realloc(w->rows, max_rows * sizeof(*w->rows));
-    if (!w->rows)
-        die("Out of memory");
-
+    w->rows = xrealloc(w->rows, max_rows * sizeof(*w->rows));
     w->max_rows = max_rows;
 }
 
@@ -429,12 +419,12 @@ void widget_set_background(struct widget *w, uint32_t rgba)
 
 void widget_set_highlight_foreground(struct widget *w, uint32_t rgba)
 {
-    color_set(&w->highlight_fg, rgba);
+    color_set(&w->highlight_foreground, rgba);
 }
 
 void widget_set_highlight_background(struct widget *w, uint32_t rgba)
 {
-    color_set(&w->highlight_bg, rgba);
+    color_set(&w->highlight_background, rgba);
 }
 
 void widget_set_border(struct widget *w, uint32_t rgba)

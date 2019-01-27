@@ -35,6 +35,8 @@
 #include <unistd.h>
 
 #include "proc-util.h"
+#include "xmalloc.h"
+#include "xstring.h"
 
 #include "load.h"
 
@@ -59,17 +61,13 @@ static void merge(struct item *dst,
         dst++->name = src[j++].name;
 }
 
-static void sort(struct item *list, size_t size)
+static void sort(struct item *items, size_t size)
 {
-    struct item *buf = malloc(size * sizeof(*buf));
-    struct item item = {NULL, 0};
+    struct item *buf = xmalloc(size * sizeof(*buf));
+    struct item item = { NULL, 0 };
     size_t n = 16;
 
-    if (!buf)
-        die("Out of memory\n");
-
     /* Sort small batches of size 'n' with insertion sort */
-
     for (size_t i = 0; i < size; i += n) {
         size_t end = i + n;
 
@@ -79,14 +77,14 @@ static void sort(struct item *list, size_t size)
         for (size_t j = i + 1; j < end; ++j) {
             size_t k = j;
 
-            item.name = list[j].name;
+            item.name = items[j].name;
 
-            while (k > i && strverscmp(list[k - 1].name, item.name) > 0) {
-                list[k].name = list[k - 1].name;
+            while (k > i && strverscmp(items[k - 1].name, item.name) > 0) {
+                items[k].name = items[k - 1].name;
                 --k;
             }
 
-            list[k].name = item.name;
+            items[k].name = item.name;
         }
     }
 
@@ -94,7 +92,7 @@ static void sort(struct item *list, size_t size)
 
     while (n < size) {
         struct item *dst = buf;
-        struct item *src = list;
+        struct item *src = items;
 
         for (size_t i = 0; i < size; i += (n + n)) {
             size_t j = i + n;
@@ -112,7 +110,7 @@ static void sort(struct item *list, size_t size)
 
         n *= 2;
 
-        dst = list;
+        dst = items;
         src = buf;
 
         for (size_t i = 0; i < size; i += (n + n)) {
@@ -135,63 +133,83 @@ static void sort(struct item *list, size_t size)
     free(buf);
 }
 
-static size_t dedup(struct item *list, size_t size)
+static void dedup(struct item *items, size_t *size)
 {
-    size_t i = 0;
+    size_t i = 0, n = *size;
 
-    for (size_t j = 1; j < size; ++j) {
-        if (strcmp(list[i].name, list[j].name) != 0)
-            list[++i].name = list[j].name;
+    for (size_t j = 1; j < n; ++j) {
+        if (strcmp(items[i].name, items[j].name) != 0)
+            items[++i].name = items[j].name;
     }
 
-    return i;
+    *size = i;
 }
 
-static ssize_t do_cache_read(int fd, const char *path, struct item **list)
+static int cache_read_data_str(int fd, const char *path, char **data)
 {
-    char *iter = strdupa(path);
-    size_t size = 0, n = 0, n_max;
-    struct stat st;
-    char *mem;
+    struct stat stat_cache;
+    size_t n = 0;
+    char *buf;
     int err;
 
-    err = fstat(fd, &st);
+    err = fstat(fd, &stat_cache);
     if (err < 0)
         return -errno;
 
-    if (st.st_size < 0)
+    if (stat_cache.st_size < 0)
         return -EINVAL;
+
+    if (!stat_cache.st_size) {
+        *data = NULL;
+        return 0;
+    }
 
     /*
      * Check if the last modification to the cache was made after
-     * changes to the directories specified in 'path'.
+     * the last modification to the directories specified in 'path'.
      */
+    
+    buf = strdupa(path);
+    while (buf) {
+        char *str = buf;
+        struct stat st;
+        int err;
+        
+        buf = strchr(buf, ':');
+        if (buf)
+            *buf++ = '\0';
 
-    while (iter) {
-        struct stat buf;
-        char *str = strsep(&iter, ":");
-
-        err = stat(str, &buf);
+        err = stat(str, &st);
         if (err < 0)
             return -errno;
 
-        if (buf.st_mtim.tv_sec < st.st_mtim.tv_sec)
+        /* 
+         * Is the cache definitly younger than the last modification to
+         * directory 'str'?
+         */
+        if (st.st_mtim.tv_sec < stat_cache.st_mtim.tv_sec)
             continue;
-
-        if (buf.st_mtim.tv_sec > st.st_mtim.tv_sec)
+        
+        /* 
+         * Is the cache definitly older than the last modification to
+         * directory 'str'
+         */
+        if (st.st_mtim.tv_sec > stat_cache.st_mtim.tv_sec)
             return -EINVAL;
-
-        if (buf.st_mtim.tv_nsec > st.st_mtim.tv_nsec)
+        
+        /*
+         * Both timestamps are about the same age.
+         * Compare them on a finer granularity.
+         */
+        if (st.st_mtim.tv_nsec > stat_cache.st_mtim.tv_nsec)
             return -EINVAL;
     }
 
-    /* Read the whole file in one go */
-    mem = malloc(st.st_size * sizeof(*mem));
-    if (!mem)
-        return -errno;
+    /* Read in the whole file as a string */
+    *data = xmalloc((size_t) stat_cache.st_size + 1);
 
     do {
-        ssize_t m = read(fd, mem + size, st.st_size - size);
+        ssize_t m = read(fd, *data + n, (size_t) stat_cache.st_size - n);
         if (m < 0) {
             if (errno == EINTR)
                 continue;
@@ -199,61 +217,93 @@ static ssize_t do_cache_read(int fd, const char *path, struct item **list)
             return -errno;
         }
 
-        size += m;
-    } while (size < (size_t) st.st_size);
+        n += m;
+    } while (n < (size_t) stat_cache.st_size);
+
+    (*data)[stat_cache.st_size] = '\0';
+
+    return 0;
+}
+
+static int 
+do_cache_read(int fd, const char *path, struct item **items, size_t *size)
+{
+    char *data, *str;
+    size_t n = 0, n_max;
+    int err;
+
+    err = cache_read_data_str(fd, path, &data);
+    if (err < 0)
+        return err;
+
+    if (!data)
+        return -EINVAL;
 
     /* Does 'path' match with the information stored in the cache */
-    if (strcmp(path, strsep(&mem, "\n")) != 0)
+    str = data;
+    data = strchr(data, '\n');
+
+    if (!data)
+        return -EINVAL;
+
+    *data++ = '\0';
+
+    if (strcmp(path, str) != 0)
         return -EINVAL;
 
     /* Retrieve the number of items stored in the cache */
-    if (!mem || !isdigit(mem[0]))
+    if (!isdigit(data[0]))
         return -EINVAL;
 
-    n_max = strtoul(mem, &mem, 10);
+    n_max = strtoul(data, &data, 10);
 
-    *list = malloc(n_max * sizeof(**list));
-    if (!*list)
-        return -errno;
+    /* Retrieve all items which from the cache */
+    *items = xmalloc(n_max * sizeof(**items));
 
-    /* Retrieve all items from the cache */
-    while (mem) {
-        char *line = strsep(&mem, "\n");
-        size_t len = strlen(line);
+    while (data) {
+        char *str = data;
+        data = strchr(data, '\n');
 
-        if (!len)
+        if (data)
+            *data++ = '\0';
+
+        if (!strlen(str))
             continue;
 
         if (n >= n_max)
             return -EINVAL;
 
-        (*list)[n].hits = 0;
-        (*list)[n].name = line;
+        (*items)[n].hits = 0;
+        (*items)[n].name = str;
 
         ++n;
     }
 
-    return n;
+    *size = n;
+
+    return 0;
 }
 
-static ssize_t
-cache_read(const char *cache, const char *path, struct item **list)
+static int cache_read(const char *cache,
+                      const char *path, 
+                      struct item **items,
+                      size_t *size)
 {
-    int fd = open(cache, O_RDONLY);
-    ssize_t size;
-
+    int fd, err;
+    
+    fd = open(cache, O_RDONLY);
     if (fd < 0)
         return -errno;
 
-    size = do_cache_read(fd, path, list);
+    err = do_cache_read(fd, path, items, size);
 
     close(fd);
 
-    return size;
+    return err;
 }
 
 static void
-cache_write(const char *cache, const char *path, struct item *list, size_t size)
+cache_write(const char *cache, const char *path, struct item *items, size_t size)
 {
     FILE *file = fopen(cache, "w");
     if (!file)
@@ -262,24 +312,26 @@ cache_write(const char *cache, const char *path, struct item *list, size_t size)
     fprintf(file, "%s\n%lu\n\n", path, size);
 
     for (size_t i = 0; i < size; ++i)
-        fprintf(file, "%s\n", list[i].name);
+        fprintf(file, "%s\n", items[i].name);
 
     fclose(file);
 }
 
-static size_t do_load(const char *path, const char *cache, struct item **list)
+static void do_path_load(const char *path, 
+                         const char *cache, 
+                         struct item **items,
+                         size_t *size)
 {
     size_t n = 0, n_max = 4096;
     char *iter;
-    ssize_t size;
+    int err;
 
-    size = cache_read(cache, path, list);
-    if (size >= 0)
-        return (size_t) size;
+    /* Check if we can use previously cached data */
+    err = cache_read(cache, path, items, size);
+    if (!err)
+        return;
 
-    *list = malloc(n_max * sizeof(**list));
-    if (!list)
-        die("Out of memory\n");
+    *items = xmalloc(n_max * sizeof(**items));
 
     iter = strdupa(path);
     while (iter) {
@@ -310,16 +362,11 @@ static size_t do_load(const char *path, const char *cache, struct item **list)
             if (n >= n_max) {
                 n_max = n_max * 2 - n_max / 2;
 
-                *list = realloc(*list, n_max * sizeof(**list));
-                if (!*list)
-                    die("Out of memory\n");
+                *items = xrealloc(*items, n_max * sizeof(**items));
             }
 
-            (*list)[n].hits = 0;
-            (*list)[n].name = strdup(entry->d_name);
-
-            if (!(*list)[n].name)
-                die("Out of memory\n");
+            (*items)[n].hits = 0;
+            (*items)[n].name = xstrdup(entry->d_name);
 
             ++n;
         }
@@ -327,22 +374,104 @@ static size_t do_load(const char *path, const char *cache, struct item **list)
         closedir(dir);
     }
 
-    sort(*list, n);
-    n = dedup(*list, n);
+    sort(*items, n);
+    dedup(*items, &n);
 
-    cache_write(cache, path, *list, n);
+    cache_write(cache, path, *items, n);
 
-    return n;
+    *size = n;
 }
 
-size_t load(struct item **list)
+static void load_from_stdin(struct item **items, size_t *size)
+{
+    char *data;
+    size_t n = 0, n_max = 4096;
+
+    data = xmalloc(n_max);
+
+    while (1) {
+        ssize_t m = read(STDIN_FILENO, data + n, n_max - n);
+        if (m < 0) {
+            if (errno == EINTR)
+                continue;
+            
+            die_error(errno, "Failed to read data from stdin");
+        }
+
+        if (!m)
+            break;
+
+        n += m;
+
+        if (n >= n_max) {
+            n_max *= 2;
+
+            data = xrealloc(data, n_max);
+        }
+    }
+    
+    if (!n) {
+        free(data);
+        *size = 0;
+
+        return;
+    }
+
+    if (n >= n_max)
+        data = xrealloc(data, n_max + 1);
+
+    data[n] = '\0';
+
+    /* Get a good initial value for the item allocation */
+    n_max = n / 40;
+    n = 0;
+
+    *items = xmalloc(n_max * sizeof(**items));
+
+    while (data) {
+        char *p;
+        char *str = data;
+        data = strchr(data, '\n');
+
+        if (data)
+            *data++ = '\0';
+
+        while (*str != '\0' && isspace(*str))
+            ++str;
+
+        p = str;
+
+        while (*p != '\0' && !isspace(*p))
+            ++p;
+
+        *p = '\0';
+
+        if (str == p)
+            continue;
+
+        if (n >= n_max) {
+            n_max = n_max * 2 - n_max / 2;
+
+            *items = xrealloc(*items, n_max * sizeof(**items));
+        }
+
+        (*items)[n].hits = 0;
+        (*items)[n].name = str;
+
+        ++n;
+    }
+    
+    *size = n;
+}
+
+static void load_from_path(struct item **items, size_t *size)
 {
     char *path, *cache;
     size_t n;
     char *env_path = getenv("PATH");
     char *env_home = getenv("HOME");
 
-    if (!list)
+    if (!items)
         die("load(): Invalid argument\n");
 
     if (!env_path)
@@ -359,5 +488,24 @@ size_t load(struct item **list)
     strcpy(cache, env_home);
     strcpy(cache + n, "/.cache/wlmenu/cache");
 
-    return do_load(path, cache, list);
+    do_path_load(path, cache, items, size);
+}
+
+void load(struct item **items, size_t *size)
+{
+    struct stat st;
+    int err;
+
+    err = fstat(STDIN_FILENO, &st);
+    if (err < 0)
+        die_error(errno, "Failed to retrieve status of stdin");
+
+    if (S_ISFIFO(st.st_mode)) {
+        load_from_stdin(items, size);
+
+        if (*size > 0)
+            return;
+    }
+
+    load_from_path(items, size);
 }

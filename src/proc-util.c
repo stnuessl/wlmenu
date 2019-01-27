@@ -64,3 +64,4 @@ void die_error(int err, const char *fmt, ...)
 
     exit(EXIT_FAILURE);
 }
+

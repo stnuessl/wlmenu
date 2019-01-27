@@ -32,6 +32,6 @@ struct item {
     size_t hits;
 };
 
-size_t load(struct item **list);
+void load(struct item **list, size_t *size);
 
 #endif /* LOAD_H_ */
