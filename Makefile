@@ -305,6 +305,9 @@ clean:
 format:
 	clang-format -i $(HDR) $(SRC)
 
+tags: $(HDR) $(SRC)
+	ctags -f tags $^
+
 install: $(TARGET)
 	cp $(TARGET) $(INSTALL_DIR)
 
@@ -317,9 +320,11 @@ uninstall:
 	format													\
 	install 												\
 	release 												\
+	tags													\
 	syntax-check 											\
 	uninstall
-	
+
 .SILENT: clean 												\
 	format 													\
+    tags                                                    \
 	$(DIRS)

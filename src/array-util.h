@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2018 Steffen Nuessle
+ * Copyright (c) 2019 Steffen Nuessle
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,46 +22,9 @@
  * SOFTWARE.
  */
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#ifndef ARRAY_UTIL_H_
+#define ARRAY_UTIL_H_
 
-#include "proc-util.h"
+#define ARRAY_SIZE(x) (sizeof((x)) / sizeof(*(x)))
 
-void die(const char *fmt, ...)
-{
-    va_list args;
-
-    va_start(args, fmt);
-
-    fprintf(stderr, "wlmenu: ");
-    vfprintf(stderr, fmt, args);
-
-    va_end(args);
-
-    exit(EXIT_FAILURE);
-}
-
-void die_error(int err, const char *fmt, ...)
-{
-    va_list args;
-
-    va_start(args, fmt);
-
-    fprintf(stderr, "wlmenu: ");
-    vfprintf(stderr, fmt, args);
-
-    va_end(args);
-
-    if (err != 0) {
-        char buf[128];
-
-        fprintf(stderr, " - %s", strerror_r(err, buf, sizeof(buf)));
-    }
-
-    fprintf(stderr, "\n");
-
-    exit(EXIT_FAILURE);
-}
-
+#endif /* ARRAY_UTIL_H_ */

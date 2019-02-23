@@ -1,0 +1,248 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	0.0.0	/45968eff/
+ARRAY_SIZE	src/array-util.h	/^#define ARRAY_SIZE(/;"	d
+ARRAY_UTIL_H_	src/array-util.h	/^#define ARRAY_UTIL_H_$/;"	d
+CONFIG_H_	src/config.h	/^#define CONFIG_H_$/;"	d
+DIE_H_	src/die.h	/^#define DIE_H_$/;"	d
+GLYPH_BUFFER_SIZE	src/widget.c	/^#define GLYPH_BUFFER_SIZE /;"	d	file:
+IO_UTIL_H_	src/io-util.h	/^#define IO_UTIL_H_$/;"	d
+LOAD_H_	src/load.h	/^#define LOAD_H_$/;"	d
+WIDGET_H_	src/widget.h	/^#define WIDGET_H_$/;"	d
+WLMENU_H_	src/wlmenu.h	/^#define WLMENU_H_$/;"	d
+WLMENU_MAJOR_VERSION	src/main.c	/^#define WLMENU_MAJOR_VERSION /;"	d	file:
+WLMENU_MINOR_VERSION	src/main.c	/^#define WLMENU_MINOR_VERSION /;"	d	file:
+WLMENU_PATCH_VERSION	src/main.c	/^#define WLMENU_PATCH_VERSION /;"	d	file:
+WLMENU_VERSION	src/main.c	/^#define WLMENU_VERSION /;"	d	file:
+XKB_H_	src/xkb.h	/^#define XKB_H_$/;"	d
+XMALLOC_H_	src/xmalloc.h	/^#define XMALLOC_H_$/;"	d
+XSTRING_H_	src/xstring.h	/^#define XSTRING_H_$/;"	d
+alpha	src/widget.h	/^    double alpha;$/;"	m	struct:color	typeref:typename:double
+blue	src/widget.h	/^    double blue;$/;"	m	struct:color	typeref:typename:double
+buffer	src/wlmenu.h	/^    struct wl_buffer *buffer;$/;"	m	struct:wlmenu	typeref:struct:wl_buffer *
+buffer_listener	src/wlmenu.c	/^static const struct wl_buffer_listener buffer_listener = {$/;"	v	typeref:typename:const struct wl_buffer_listener	file:
+buffer_release	src/wlmenu.c	/^static void buffer_release(void *data, struct wl_buffer *buffer)$/;"	f	typeref:typename:void	file:
+cache_read	src/load.c	/^static int cache_read(const char *cache,$/;"	f	typeref:typename:int	file:
+cache_read_data_str	src/load.c	/^static int cache_read_data_str(int fd, const char *path, char **data)$/;"	f	typeref:typename:int	file:
+cache_write	src/load.c	/^cache_write(const char *cache, const char *path, struct item *items, size_t size)$/;"	f	typeref:typename:void	file:
+cairo_util_rectangle	src/widget.c	/^static void cairo_util_rectangle(cairo_t *cairo, const struct rectangle *rect)$/;"	f	typeref:typename:void	file:
+cairo_util_set_source	src/widget.c	/^static void cairo_util_set_source(cairo_t *cairo, const struct color *c)$/;"	f	typeref:typename:void	file:
+cairo_util_show_glyphs	src/widget.c	/^static void cairo_util_show_glyphs(cairo_t *cairo,$/;"	f	typeref:typename:void	file:
+color	src/widget.h	/^struct color {$/;"	s
+color_borders	src/widget.h	/^    struct color color_borders;$/;"	m	struct:widget	typeref:struct:color
+color_set	src/widget.c	/^static void color_set(struct color *c, uint32_t rgba)$/;"	f	typeref:typename:void	file:
+compositor	src/wlmenu.h	/^    struct wl_compositor *compositor;$/;"	m	struct:wlmenu	typeref:struct:wl_compositor *
+config	src/config.c	/^    struct config *config;$/;"	m	struct:parser	typeref:struct:config *	file:
+config	src/config.h	/^struct config {$/;"	s
+config_add_entry	src/config.c	/^static void config_add_entry(struct config *c, $/;"	f	typeref:typename:void	file:
+config_destroy	src/config.c	/^void config_destroy(struct config *c)$/;"	f	typeref:typename:void
+config_do_load	src/config.c	/^static void config_do_load(struct config *c, const char *path)$/;"	f	typeref:typename:void	file:
+config_entry	src/config.h	/^struct config_entry {$/;"	s
+config_get_double	src/config.c	/^double config_get_double(const struct config *c, const char *str, double sub)$/;"	f	typeref:typename:double
+config_get_index	src/config.c	/^static int config_get_index(const struct config *c, const char *str)$/;"	f	typeref:typename:int	file:
+config_get_int	src/config.c	/^int config_get_int(const struct config *c, const char *str, int sub)$/;"	f	typeref:typename:int
+config_get_str	src/config.c	/^const char *config_get_str(const struct config *c, const char *str, const char *sub)$/;"	f	typeref:typename:const char *
+config_get_u32	src/config.c	/^uint32_t config_get_u32(const struct config *c, const char *str, uint32_t sub)$/;"	f	typeref:typename:uint32_t
+config_init	src/config.c	/^void config_init(struct config *c)$/;"	f	typeref:typename:void
+config_load	src/config.c	/^void config_load(struct config *c, const char *path)$/;"	f	typeref:typename:void
+config_sort_entries	src/config.c	/^static void config_sort_entries(struct config *c)$/;"	f	typeref:typename:void	file:
+context	src/xkb.h	/^    struct xkb_context *context;$/;"	m	struct:xkb	typeref:struct:xkb_context *
+cr	src/widget.h	/^    cairo_t *cr;$/;"	m	struct:widget	typeref:typename:cairo_t *
+cur	src/config.c	/^    char *cur;$/;"	m	struct:parser	typeref:typename:char *	file:
+dedup	src/load.c	/^static void dedup(struct item *items, size_t *size)$/;"	f	typeref:typename:void	file:
+default_background	src/widget.h	/^    struct color default_background;$/;"	m	struct:widget	typeref:struct:color
+default_foreground	src/widget.h	/^    struct color default_foreground;$/;"	m	struct:widget	typeref:struct:color
+delay	src/wlmenu.h	/^    int32_t delay;$/;"	m	struct:wlmenu	typeref:typename:int32_t
+die	src/die.c	/^void die(const char *fmt, ...)$/;"	f	typeref:typename:void
+die_error	src/die.c	/^void die_error(int err, const char *fmt, ...)$/;"	f	typeref:typename:void
+die_oom	src/die.h	/^#define die_oom(/;"	d
+dirty	src/wlmenu.h	/^    uint8_t dirty : 1;$/;"	m	struct:wlmenu	typeref:typename:uint8_t:1
+display	src/wlmenu.h	/^    struct wl_display *display;$/;"	m	struct:wlmenu	typeref:struct:wl_display *
+do_cache_read	src/load.c	/^do_cache_read(int fd, const char *path, struct item **items, size_t *size)$/;"	f	typeref:typename:int	file:
+do_path_load	src/load.c	/^static void do_path_load(const char *path, $/;"	f	typeref:typename:void	file:
+entries	src/config.h	/^    struct config_entry *entries;$/;"	m	struct:config	typeref:struct:config_entry *
+entry_cmp	src/config.c	/^entry_cmp(const struct config_entry *e1, const struct config_entry *e2)$/;"	f	typeref:typename:int	file:
+epoll_fd	src/wlmenu.h	/^    int epoll_fd;$/;"	m	struct:wlmenu	typeref:typename:int
+face	src/widget.h	/^    FT_Face face;$/;"	m	struct:widget	typeref:typename:FT_Face
+file	src/config.c	/^    const char *file;$/;"	m	struct:parser	typeref:typename:const char *	file:
+focus_background	src/widget.h	/^    struct color focus_background;$/;"	m	struct:widget	typeref:struct:color
+focus_foreground	src/widget.h	/^    struct color focus_foreground;$/;"	m	struct:widget	typeref:struct:color
+font_size	src/widget.h	/^    double font_size;$/;"	m	struct:widget	typeref:typename:double
+freetype	src/widget.h	/^    FT_Library freetype;$/;"	m	struct:widget	typeref:typename:FT_Library
+glyph_offset_x	src/widget.h	/^    int32_t glyph_offset_x;$/;"	m	struct:widget	typeref:typename:int32_t
+glyph_offset_y	src/widget.h	/^    int32_t glyph_offset_y;$/;"	m	struct:widget	typeref:typename:int32_t
+glyphs	src/widget.h	/^    cairo_glyph_t *glyphs;$/;"	m	struct:widget	typeref:typename:cairo_glyph_t *
+green	src/widget.h	/^    double green;$/;"	m	struct:color	typeref:typename:double
+height	src/widget.h	/^    int32_t height;$/;"	m	struct:rectangle	typeref:typename:int32_t
+height	src/wlmenu.h	/^    int32_t height;$/;"	m	struct:wlmenu	typeref:typename:int32_t
+help	src/main.c	/^static void help(void)$/;"	f	typeref:typename:void	file:
+hits	src/load.h	/^    size_t hits;$/;"	m	struct:item	typeref:typename:size_t
+input	src/widget.h	/^    struct rectangle input;$/;"	m	struct:widget	typeref:struct:rectangle
+io_util_read	src/io-util.c	/^int io_util_read(int fd, void *buf, size_t size)$/;"	f	typeref:typename:int
+item	src/load.h	/^struct item {$/;"	s
+items	src/wlmenu.h	/^    struct item *items;$/;"	m	struct:wlmenu	typeref:struct:item *
+key	src/config.h	/^    const char *key;$/;"	m	struct:config_entry	typeref:typename:const char *
+key_repeat_event	src/wlmenu.c	/^static struct wlmenu_event key_repeat_event = {$/;"	v	typeref:struct:wlmenu_event	file:
+keyboard	src/wlmenu.h	/^    struct wl_keyboard *keyboard;$/;"	m	struct:wlmenu	typeref:struct:wl_keyboard *
+keyboard_enter	src/wlmenu.c	/^static void keyboard_enter(void *data,$/;"	f	typeref:typename:void	file:
+keyboard_key	src/wlmenu.c	/^static void keyboard_key(void *data,$/;"	f	typeref:typename:void	file:
+keyboard_keymap	src/wlmenu.c	/^static void keyboard_keymap(void *data,$/;"	f	typeref:typename:void	file:
+keyboard_leave	src/wlmenu.c	/^static void keyboard_leave(void *data,$/;"	f	typeref:typename:void	file:
+keyboard_listener	src/wlmenu.c	/^static const struct wl_keyboard_listener keyboard_listener = {$/;"	v	typeref:typename:const struct wl_keyboard_listener	file:
+keyboard_modifiers	src/wlmenu.c	/^static void keyboard_modifiers(void *data,$/;"	f	typeref:typename:void	file:
+keyboard_repeat_info	src/wlmenu.c	/^static void keyboard_repeat_info(void *data,$/;"	f	typeref:typename:void	file:
+keymap	src/xkb.h	/^    struct xkb_keymap *keymap;$/;"	m	struct:xkb	typeref:struct:xkb_keymap *
+len	src/widget.h	/^    size_t len;$/;"	m	struct:widget	typeref:typename:size_t
+line	src/config.c	/^    int line;$/;"	m	struct:parser	typeref:typename:int	file:
+list	src/main.c	/^static struct item *list;$/;"	v	typeref:struct:item *	file:
+load	src/load.c	/^void load(struct item **items, size_t *size)$/;"	f	typeref:typename:void
+load_from_path	src/load.c	/^static void load_from_path(struct item **items, size_t *size)$/;"	f	typeref:typename:void	file:
+load_from_stdin	src/load.c	/^static void load_from_stdin(struct item **items, size_t *size)$/;"	f	typeref:typename:void	file:
+main	src/main.c	/^int main(int argc, char *argv[])$/;"	f	typeref:typename:int
+max_glyph_width	src/widget.h	/^    int32_t max_glyph_width;$/;"	m	struct:widget	typeref:typename:int32_t
+max_glyphs_input	src/widget.h	/^    int max_glyphs_input;$/;"	m	struct:widget	typeref:typename:int
+max_glyphs_output	src/widget.h	/^    int max_glyphs_output;$/;"	m	struct:widget	typeref:typename:int
+max_rows	src/widget.h	/^    int max_rows;$/;"	m	struct:widget	typeref:typename:int
+mem	src/config.h	/^    char *mem;$/;"	m	struct:config	typeref:typename:char *
+mem	src/wlmenu.h	/^    void *mem;$/;"	m	struct:wlmenu	typeref:typename:void *
+merge	src/config.c	/^static void merge(struct config_entry *dst, $/;"	f	typeref:typename:void	file:
+merge	src/load.c	/^static void merge(struct item *dst,$/;"	f	typeref:typename:void	file:
+n	src/config.h	/^    int n;$/;"	m	struct:config	typeref:typename:int
+n	src/wlmenu.h	/^    size_t n;$/;"	m	struct:wlmenu	typeref:typename:size_t
+n_glyphs	src/widget.h	/^    int n_glyphs;$/;"	m	struct:widget	typeref:typename:int
+n_rows	src/widget.h	/^    int n_rows;$/;"	m	struct:widget	typeref:typename:int
+name	src/load.h	/^    char *name;$/;"	m	struct:item	typeref:typename:char *
+output	src/widget.h	/^    struct rectangle output;$/;"	m	struct:widget	typeref:struct:rectangle
+output	src/wlmenu.h	/^    struct wl_output *output;$/;"	m	struct:wlmenu	typeref:struct:wl_output *
+output_done	src/wlmenu.c	/^static void output_done(void *data, struct wl_output *output)$/;"	f	typeref:typename:void	file:
+output_geometry	src/wlmenu.c	/^static void output_geometry(void *data,$/;"	f	typeref:typename:void	file:
+output_listener	src/wlmenu.c	/^static const struct wl_output_listener output_listener = {$/;"	v	typeref:typename:const struct wl_output_listener	file:
+output_mode	src/wlmenu.c	/^static void output_mode(void *data,$/;"	f	typeref:typename:void	file:
+output_scale	src/wlmenu.c	/^static void output_scale(void *data, struct wl_output *output, int32_t factor)$/;"	f	typeref:typename:void	file:
+parser	src/config.c	/^struct parser {$/;"	s	file:
+parser_end_line	src/config.c	/^static void parser_end_line(struct parser *parser)$/;"	f	typeref:typename:void	file:
+parser_read_key	src/config.c	/^static const char *parser_read_key(struct parser *parser)$/;"	f	typeref:typename:const char *	file:
+parser_read_section	src/config.c	/^static void parser_read_section(struct parser *parser)$/;"	f	typeref:typename:void	file:
+parser_read_section_name	src/config.c	/^static const char *parser_read_section_name(struct parser *parser)$/;"	f	typeref:typename:const char *	file:
+parser_read_value	src/config.c	/^static const char *parser_read_value(struct parser *parser)$/;"	f	typeref:typename:const char *	file:
+parser_skip_comment	src/config.c	/^static void parser_skip_comment(struct parser *parser)$/;"	f	typeref:typename:void	file:
+rate	src/wlmenu.h	/^    int32_t rate;$/;"	m	struct:wlmenu	typeref:typename:int32_t
+rectangle	src/widget.h	/^struct rectangle {$/;"	s
+red	src/widget.h	/^    double red;$/;"	m	struct:color	typeref:typename:double
+registry	src/wlmenu.h	/^    struct wl_registry *registry;$/;"	m	struct:wlmenu	typeref:struct:wl_registry *
+registry_add	src/wlmenu.c	/^static void registry_add(void *data,$/;"	f	typeref:typename:void	file:
+registry_listener	src/wlmenu.c	/^static const struct wl_registry_listener registry_listener = {$/;"	v	typeref:typename:const struct wl_registry_listener	file:
+registry_remove	src/wlmenu.c	/^registry_remove(void *data, struct wl_registry *registry, uint32_t name)$/;"	f	typeref:typename:void	file:
+released	src/wlmenu.h	/^    uint8_t released : 1;$/;"	m	struct:wlmenu	typeref:typename:uint8_t:1
+row_height	src/widget.h	/^    int32_t row_height;$/;"	m	struct:widget	typeref:typename:int32_t
+rows	src/widget.h	/^    char **rows;$/;"	m	struct:widget	typeref:typename:char **
+run	src/wlmenu.c	/^    void (*run)(struct wlmenu *w);$/;"	m	struct:wlmenu_event	typeref:typename:void (*)(struct wlmenu * w)	file:
+seat	src/wlmenu.h	/^    struct wl_seat *seat;$/;"	m	struct:wlmenu	typeref:struct:wl_seat *
+section	src/config.h	/^    const char *section;$/;"	m	struct:config_entry	typeref:typename:const char *
+selected	src/widget.h	/^    int selected;$/;"	m	struct:widget	typeref:typename:int
+serial	src/wlmenu.h	/^    uint32_t serial;$/;"	m	struct:wlmenu	typeref:typename:uint32_t
+shell	src/wlmenu.h	/^    struct wl_shell *shell;$/;"	m	struct:wlmenu	typeref:struct:wl_shell *
+shell_surface	src/wlmenu.h	/^    struct wl_shell_surface *shell_surface;$/;"	m	struct:wlmenu	typeref:struct:wl_shell_surface *
+shell_surface_configure	src/wlmenu.c	/^static void shell_surface_configure(void *data,$/;"	f	typeref:typename:void	file:
+shell_surface_listener	src/wlmenu.c	/^static const struct wl_shell_surface_listener shell_surface_listener = {$/;"	v	typeref:typename:const struct wl_shell_surface_listener	file:
+shell_surface_ping	src/wlmenu.c	/^static void shell_surface_ping(void *data,$/;"	f	typeref:typename:void	file:
+shell_surface_popup_done	src/wlmenu.c	/^static void shell_surface_popup_done(void *data,$/;"	f	typeref:typename:void	file:
+shm	src/wlmenu.h	/^    struct wl_shm *shm;$/;"	m	struct:wlmenu	typeref:struct:wl_shm *
+show	src/wlmenu.h	/^    uint8_t show : 1;$/;"	m	struct:wlmenu	typeref:typename:uint8_t:1
+size	src/config.h	/^    int size;$/;"	m	struct:config	typeref:typename:int
+size	src/main.c	/^static size_t size;$/;"	v	typeref:typename:size_t	file:
+size	src/wlmenu.h	/^    size_t size;$/;"	m	struct:wlmenu	typeref:typename:size_t
+sort	src/config.c	/^static void sort(struct config_entry *entries, $/;"	f	typeref:typename:void	file:
+sort	src/load.c	/^static void sort(struct item *items, size_t size)$/;"	f	typeref:typename:void	file:
+state	src/xkb.h	/^    struct xkb_state *state;$/;"	m	struct:xkb	typeref:struct:xkb_state *
+str	src/widget.h	/^    char str[32];$/;"	m	struct:widget	typeref:typename:char[32]
+stride	src/wlmenu.h	/^    int32_t stride;$/;"	m	struct:wlmenu	typeref:typename:int32_t
+subcompositor	src/wlmenu.h	/^    struct wl_subcompositor *subcompositor;$/;"	m	struct:wlmenu	typeref:struct:wl_subcompositor *
+surface	src/wlmenu.h	/^    struct wl_surface *surface;$/;"	m	struct:wlmenu	typeref:struct:wl_surface *
+surface_enter	src/wlmenu.c	/^surface_enter(void *data, struct wl_surface *surface, struct wl_output *output)$/;"	f	typeref:typename:void	file:
+surface_leave	src/wlmenu.c	/^surface_leave(void *data, struct wl_surface *surface, struct wl_output *output)$/;"	f	typeref:typename:void	file:
+surface_listener	src/wlmenu.c	/^static const struct wl_surface_listener surface_listener = {$/;"	v	typeref:typename:const struct wl_surface_listener	file:
+symbol	src/wlmenu.h	/^    xkb_keysym_t symbol;$/;"	m	struct:wlmenu	typeref:typename:xkb_keysym_t
+thr_load	src/main.c	/^static void *thr_load(void *arg)$/;"	f	typeref:typename:void *	file:
+timer_fd	src/wlmenu.h	/^    int timer_fd;$/;"	m	struct:wlmenu	typeref:typename:int
+value	src/config.h	/^    const char *value;$/;"	m	struct:config_entry	typeref:typename:const char *
+widget	src/widget.h	/^struct widget {$/;"	s
+widget	src/wlmenu.h	/^    struct widget widget;$/;"	m	struct:wlmenu	typeref:struct:widget
+widget_area	src/widget.c	/^void widget_area(const struct widget *w, struct rectangle *rect)$/;"	f	typeref:typename:void
+widget_clear_input_str	src/widget.c	/^void widget_clear_input_str(struct widget *w)$/;"	f	typeref:typename:void
+widget_clear_rows	src/widget.c	/^void widget_clear_rows(struct widget *w)$/;"	f	typeref:typename:void
+widget_configure	src/widget.c	/^void widget_configure(struct widget *w,$/;"	f	typeref:typename:void
+widget_configure_font	src/widget.c	/^static void widget_configure_font(struct widget *w, cairo_font_extents_t *ex)$/;"	f	typeref:typename:void	file:
+widget_destroy	src/widget.c	/^void widget_destroy(struct widget *w)$/;"	f	typeref:typename:void
+widget_draw	src/widget.c	/^void widget_draw(struct widget *w)$/;"	f	typeref:typename:void
+widget_draw_input	src/widget.c	/^static void widget_draw_input(struct widget *w)$/;"	f	typeref:typename:void	file:
+widget_draw_output	src/widget.c	/^static void widget_draw_output(struct widget *w)$/;"	f	typeref:typename:void	file:
+widget_has_empty_row	src/widget.c	/^bool widget_has_empty_row(const struct widget *w)$/;"	f	typeref:typename:bool
+widget_init	src/widget.c	/^void widget_init(struct widget *w)$/;"	f	typeref:typename:void
+widget_input_str	src/widget.c	/^const char *widget_input_str(const struct widget *w)$/;"	f	typeref:typename:const char *
+widget_input_strlen	src/widget.c	/^size_t widget_input_strlen(const struct widget *w)$/;"	f	typeref:typename:size_t
+widget_insert_char	src/widget.c	/^void widget_insert_char(struct widget *w, int c)$/;"	f	typeref:typename:void
+widget_insert_row	src/widget.c	/^void widget_insert_row(struct widget *w, char *str)$/;"	f	typeref:typename:void
+widget_remove_char	src/widget.c	/^void widget_remove_char(struct widget *w)$/;"	f	typeref:typename:void
+widget_rows	src/widget.c	/^size_t widget_rows(const struct widget *w)$/;"	f	typeref:typename:size_t
+widget_selected_item	src/widget.c	/^const char *widget_selected_item(const struct widget *w)$/;"	f	typeref:typename:const char *
+widget_selected_item_down	src/widget.c	/^void widget_selected_item_down(struct widget *w)$/;"	f	typeref:typename:void
+widget_selected_item_up	src/widget.c	/^void widget_selected_item_up(struct widget *w)$/;"	f	typeref:typename:void
+widget_set_color_borders	src/widget.c	/^void widget_set_color_borders(struct widget *w, uint32_t rgba)$/;"	f	typeref:typename:void
+widget_set_default_background	src/widget.c	/^void widget_set_default_background(struct widget *w, uint32_t rgba)$/;"	f	typeref:typename:void
+widget_set_default_foreground	src/widget.c	/^void widget_set_default_foreground(struct widget *w, uint32_t rgba)$/;"	f	typeref:typename:void
+widget_set_focus_background	src/widget.c	/^void widget_set_focus_background(struct widget *w, uint32_t rgba)$/;"	f	typeref:typename:void
+widget_set_focus_foreground	src/widget.c	/^void widget_set_focus_foreground(struct widget *w, uint32_t rgba)$/;"	f	typeref:typename:void
+widget_set_font	src/widget.c	/^void widget_set_font(struct widget *w, const char *file)$/;"	f	typeref:typename:void
+widget_set_font_size	src/widget.c	/^void widget_set_font_size(struct widget *w, double size)$/;"	f	typeref:typename:void
+widget_set_max_rows	src/widget.c	/^void widget_set_max_rows(struct widget *w, int max_rows)$/;"	f	typeref:typename:void
+widget_show_text	src/widget.c	/^static void widget_show_text(struct widget *w, $/;"	f	typeref:typename:void	file:
+width	src/widget.h	/^    int32_t width;$/;"	m	struct:rectangle	typeref:typename:int32_t
+width	src/wlmenu.h	/^    int32_t width;$/;"	m	struct:wlmenu	typeref:typename:int32_t
+wl_display_event	src/wlmenu.c	/^static struct wlmenu_event wl_display_event = {$/;"	v	typeref:struct:wlmenu_event	file:
+wlmenu	src/main.c	/^static struct wlmenu wlmenu;$/;"	v	typeref:struct:wlmenu	file:
+wlmenu	src/wlmenu.h	/^struct wlmenu {$/;"	s
+wlmenu_add_epoll_event	src/wlmenu.c	/^wlmenu_add_epoll_event(struct wlmenu *w, int fd, struct wlmenu_event *event)$/;"	f	typeref:typename:void	file:
+wlmenu_bind_compositor	src/wlmenu.c	/^wlmenu_bind_compositor(struct wlmenu *w, uint32_t name, uint32_t version)$/;"	f	typeref:typename:void	file:
+wlmenu_bind_output	src/wlmenu.c	/^wlmenu_bind_output(struct wlmenu *w, uint32_t name, uint32_t version)$/;"	f	typeref:typename:void	file:
+wlmenu_bind_seat	src/wlmenu.c	/^static void wlmenu_bind_seat(struct wlmenu *w, uint32_t name, uint32_t version)$/;"	f	typeref:typename:void	file:
+wlmenu_bind_shell	src/wlmenu.c	/^static void wlmenu_bind_shell(struct wlmenu *w, uint32_t name, uint32_t version)$/;"	f	typeref:typename:void	file:
+wlmenu_bind_shm	src/wlmenu.c	/^static void wlmenu_bind_shm(struct wlmenu *w, uint32_t name, uint32_t version)$/;"	f	typeref:typename:void	file:
+wlmenu_bind_subcompositor	src/wlmenu.c	/^wlmenu_bind_subcompositor(struct wlmenu *w, uint32_t name, uint32_t version)$/;"	f	typeref:typename:void	file:
+wlmenu_destroy	src/wlmenu.c	/^void wlmenu_destroy(struct wlmenu *w)$/;"	f	typeref:typename:void
+wlmenu_dispatch_key_event	src/wlmenu.c	/^static void wlmenu_dispatch_key_event(struct wlmenu *w, xkb_keysym_t symbol)$/;"	f	typeref:typename:void	file:
+wlmenu_dispatch_messages	src/wlmenu.c	/^static void wlmenu_dispatch_messages(struct wlmenu *w)$/;"	f	typeref:typename:void	file:
+wlmenu_draw	src/wlmenu.c	/^static void wlmenu_draw(struct wlmenu *w)$/;"	f	typeref:typename:void	file:
+wlmenu_event	src/wlmenu.c	/^struct wlmenu_event {$/;"	s	file:
+wlmenu_init	src/wlmenu.c	/^void wlmenu_init(struct wlmenu *w, const char *display_name)$/;"	f	typeref:typename:void
+wlmenu_launch_item	src/wlmenu.c	/^static void wlmenu_launch_item(const struct wlmenu *w)$/;"	f	typeref:typename:void	file:
+wlmenu_repeat_key	src/wlmenu.c	/^static void wlmenu_repeat_key(struct wlmenu *w)$/;"	f	typeref:typename:void	file:
+wlmenu_run	src/wlmenu.c	/^void wlmenu_run(struct wlmenu *w)$/;"	f	typeref:typename:void
+wlmenu_select_items	src/wlmenu.c	/^static void wlmenu_select_items(struct wlmenu *w)$/;"	f	typeref:typename:void	file:
+wlmenu_set_config	src/wlmenu.c	/^void wlmenu_set_config(struct wlmenu *w, const struct config *c)$/;"	f	typeref:typename:void
+wlmenu_set_items	src/wlmenu.c	/^void wlmenu_set_items(struct wlmenu *w, struct item *items, size_t size)$/;"	f	typeref:typename:void
+wlmenu_set_window_class	src/wlmenu.c	/^void wlmenu_set_window_class(struct wlmenu *w, const char *name)$/;"	f	typeref:typename:void
+wlmenu_set_window_title	src/wlmenu.c	/^void wlmenu_set_window_title(struct wlmenu *w, const char *title)$/;"	f	typeref:typename:void
+wlmenu_show	src/wlmenu.c	/^void wlmenu_show(struct wlmenu *w)$/;"	f	typeref:typename:void
+wlmenu_widget	src/wlmenu.c	/^struct widget *wlmenu_widget(struct wlmenu *w)$/;"	f	typeref:struct:widget *
+x	src/widget.h	/^    int32_t x;$/;"	m	struct:rectangle	typeref:typename:int32_t
+xcalloc	src/xmalloc.c	/^void *xcalloc(size_t n, size_t size)$/;"	f	typeref:typename:void *
+xkb	src/wlmenu.h	/^    struct xkb xkb;$/;"	m	struct:wlmenu	typeref:struct:xkb
+xkb	src/xkb.h	/^struct xkb {$/;"	s
+xkb_ctrl_active	src/xkb.c	/^bool xkb_ctrl_active(const struct xkb *xkb)$/;"	f	typeref:typename:bool
+xkb_destroy	src/xkb.c	/^void xkb_destroy(struct xkb *xkb)$/;"	f	typeref:typename:void
+xkb_get_sym	src/xkb.c	/^xkb_keysym_t xkb_get_sym(struct xkb *xkb, uint32_t key)$/;"	f	typeref:typename:xkb_keysym_t
+xkb_init	src/xkb.c	/^void xkb_init(struct xkb *xkb)$/;"	f	typeref:typename:void
+xkb_keymap_ok	src/xkb.c	/^bool xkb_keymap_ok(const struct xkb *xkb)$/;"	f	typeref:typename:bool
+xkb_keysym_is_modifier	src/xkb.c	/^bool xkb_keysym_is_modifier(xkb_keysym_t symbol)$/;"	f	typeref:typename:bool
+xkb_set_keymap	src/xkb.c	/^bool xkb_set_keymap(struct xkb *xkb, const char *desc)$/;"	f	typeref:typename:bool
+xkb_set_wl_keymap	src/xkb.c	/^bool xkb_set_wl_keymap(struct xkb *xkb, int fd, size_t size)$/;"	f	typeref:typename:bool
+xkb_state_update	src/xkb.c	/^void xkb_state_update(struct xkb *xkb,$/;"	f	typeref:typename:void
+xmalloc	src/xmalloc.c	/^void *xmalloc(size_t n)$/;"	f	typeref:typename:void *
+xrealloc	src/xmalloc.c	/^void *xrealloc(void *mem, size_t n)$/;"	f	typeref:typename:void *
+xstrdup	src/xstring.c	/^char *xstrdup(const char *s)$/;"	f	typeref:typename:char *
+y	src/widget.h	/^    int32_t y;$/;"	m	struct:rectangle	typeref:typename:int32_t

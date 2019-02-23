@@ -24,53 +24,91 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stropts.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#include <stropts.h>
 #include <time.h>
-#include <fcntl.h>
+#include <unistd.h>
 
-#include "load.h"
-#include "proc-util.h"
 #include "config.h"
+#include "die.h"
+#include "load.h"
 #include "wlmenu.h"
+
+#define WLMENU_MAJOR_VERSION "1"
+#define WLMENU_MINOR_VERSION "0"
+#define WLMENU_PATCH_VERSION "0"
+
+#define WLMENU_VERSION                                                         \
+    (WLMENU_MAJOR_VERSION "." WLMENU_MINOR_VERSION "." WLMENU_PATCH_VERSION)
 
 static struct wlmenu wlmenu;
 static struct item *list;
 static size_t size;
 
+static void help(void)
+{
+    fprintf(stdout,
+            "Usage: wlmenu [options]\n"
+            "Options:\n"
+            "--config, -c  [arg]  Use [arg] as the configuration file\n"
+            "                     instead of \"~/.config/wlmenu/config\".\n"
+            "--help, -h           Show this help message and exit.\n"
+            "--version, -v        Print the version information and exit.\n");
+}
+
 static void *thr_load(void *arg)
 {
     (void) arg;
-    
+
     load(&list, &size);
 
     pthread_exit(NULL);
 }
 
-/* 
- * TODO: Command-line arguments
- *   --rows
- *   --fg, --bg, --border, --highlight-fg, --highlight-bg
- *   --font, --font-size
- */
-
 int main(int argc, char *argv[])
 {
     struct timespec begin, end;
-    struct widget *widget;
     struct config conf;
+    char *path;
     pthread_t thread;
     uint64_t elapsed;
     int err;
 
-    (void) argc;
-    (void) argv;
+    path = getenv("HOME");
+    if (path) {
+        size_t len1 = strlen(path);
+        size_t len2 = sizeof("/.config/wlmenu/config");
+        char *s = alloca(len1 + len2);
+
+        memcpy(s, path, len1);
+        memcpy(s + len1, "/.config/wlmenu/config", len2);
+
+        path = s;
+    }
+
+    for (int i = 1; i < argc; ++i) {
+
+        if (!strcmp(argv[i], "--config") || !strcmp(argv[i], "-c")) {
+            if (++i >= argc)
+                die("missing argument for option \"%s\"\n", argv[i - 1]);
+
+            path = argv[i];
+        } else if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h")) {
+            help();
+            exit(EXIT_SUCCESS);
+        } else if (!strcmp(argv[i], "--version") || !strcmp(argv[i], "-v")) {
+            fprintf(stdout, "wlmenu: v%s\n", WLMENU_VERSION);
+            exit(EXIT_SUCCESS);
+        } else {
+            fprintf(stderr, "wlmenu: unknown argument \"%s\"\n", argv[i]);
+        }
+    }
 
     (void) clock_gettime(CLOCK_MONOTONIC, &begin);
 
@@ -79,19 +117,11 @@ int main(int argc, char *argv[])
         die("Failed to load runnable applications\n");
 
     config_init(&conf);
+    config_load(&conf, path);
 
     wlmenu_init(&wlmenu, NULL);
     wlmenu_set_window_title(&wlmenu, "wlmenu");
-    
-    widget = wlmenu_widget(&wlmenu);
-    widget_set_foreground(widget, conf.color_fg);
-    widget_set_background(widget, conf.color_bg);
-    widget_set_highlight_foreground(widget, conf.color_highlight_fg);
-    widget_set_highlight_background(widget, conf.color_highlight_bg);
-    widget_set_border(widget, conf.color_border);
-    widget_set_font(widget, "/usr/share/fonts/TTF/Hack-Regular.ttf");
-    widget_set_font_size(widget, 16.0);
-    widget_set_max_rows(widget, conf.rows);
+    wlmenu_set_config(&wlmenu, &conf);
 
     wlmenu_show(&wlmenu);
 
@@ -101,14 +131,14 @@ int main(int argc, char *argv[])
 
     (void) clock_gettime(CLOCK_MONOTONIC, &end);
 
-    elapsed = 1000000000ul * (end.tv_sec - begin.tv_sec) 
-            + (end.tv_nsec - begin.tv_nsec);
+    elapsed = 1000000000ul * (end.tv_sec - begin.tv_sec) +
+              (end.tv_nsec - begin.tv_nsec);
 
     printf("Init: %lu us / %lu ms\n", elapsed / 1000, elapsed / 1000000);
 
     printf("Entering dispatch mode\n");
 
-    wlmenu_mainloop(&wlmenu);
+    wlmenu_run(&wlmenu);
 
     wlmenu_destroy(&wlmenu);
     config_destroy(&conf);

@@ -25,8 +25,8 @@
 #ifndef WIDGET_H_
 #define WIDGET_H_
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -50,13 +50,13 @@ struct rectangle {
 struct widget {
     FT_Library freetype;
     FT_Face face;
-    
+
     cairo_t *cr;
 
     char **rows;
-    size_t n_rows;
-    size_t max_rows;
-    size_t highlight;
+    int n_rows;
+    int max_rows;
+    int selected;
 
     char str[32];
     size_t len;
@@ -75,12 +75,12 @@ struct widget {
     int32_t glyph_offset_y;
 
     int32_t max_glyph_width;
-    
-    struct color foreground;
-    struct color background;
-    struct color highlight_foreground;
-    struct color highlight_background;
-    struct color border;
+
+    struct color default_foreground;
+    struct color default_background;
+    struct color focus_foreground;
+    struct color focus_background;
+    struct color color_borders;
 };
 
 void widget_init(struct widget *w);
@@ -91,13 +91,10 @@ void widget_set_font(struct widget *w, const char *file);
 
 void widget_set_font_size(struct widget *w, double size);
 
-void widget_set_max_rows(struct widget *w, size_t max_rows);
+void widget_set_max_rows(struct widget *w, int max_rows);
 
-void widget_configure(struct widget *w,
-                      void *mem,
-                      int32_t width,
-                      int32_t height,
-                      int32_t stride);
+void widget_configure(
+    struct widget *w, void *mem, int32_t width, int32_t height, int32_t stride);
 
 void widget_draw(struct widget *w);
 
@@ -111,11 +108,11 @@ void widget_insert_char(struct widget *w, int c);
 
 void widget_remove_char(struct widget *w);
 
-const char *widget_highlight(const struct widget *w);
+const char *widget_selected_item(const struct widget *w);
 
-void widget_highlight_up(struct widget *w);
+void widget_selected_item_up(struct widget *w);
 
-void widget_highlight_down(struct widget *w);
+void widget_selected_item_down(struct widget *w);
 
 void widget_insert_row(struct widget *w, char *str);
 
@@ -125,15 +122,15 @@ void widget_clear_rows(struct widget *w);
 
 size_t widget_rows(const struct widget *w);
 
-void widget_set_foreground(struct widget *w, uint32_t rgba);
+void widget_set_default_foreground(struct widget *w, uint32_t rgba);
 
-void widget_set_background(struct widget *w, uint32_t rgba);
+void widget_set_default_background(struct widget *w, uint32_t rgba);
 
-void widget_set_highlight_foreground(struct widget *w, uint32_t rgba);
+void widget_set_focus_foreground(struct widget *w, uint32_t rgba);
 
-void widget_set_highlight_background(struct widget *w, uint32_t rgba);
+void widget_set_focus_background(struct widget *w, uint32_t rgba);
 
-void widget_set_border(struct widget *w, uint32_t rgba);
+void widget_set_color_borders(struct widget *w, uint32_t rgba);
 
 void widget_area(const struct widget *w, struct rectangle *rect);
 

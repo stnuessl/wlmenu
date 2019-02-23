@@ -24,8 +24,8 @@
 
 #include <string.h>
 
+#include "die.h"
 #include "xstring.h"
-#include "proc-util.h"
 
 char *xstrdup(const char *s)
 {

@@ -22,39 +22,45 @@
  * SOFTWARE.
  */
 
-#ifndef CONFIG_H_
-#define CONFIG_H_
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include <stddef.h>
-#include <stdint.h>
+#include "die.h"
 
-struct config_entry {
-    const char *section;
-    const char *key;
-    const char *value;
-};
+void die(const char *fmt, ...)
+{
+    va_list args;
 
-struct config {
-    char *mem;
+    va_start(args, fmt);
 
-    struct config_entry *entries;
-    int n;
-    int size;
-};
+    fprintf(stderr, "wlmenu: ");
+    vfprintf(stderr, fmt, args);
 
-void config_init(struct config *c);
+    va_end(args);
 
-void config_destroy(struct config *c);
+    exit(EXIT_FAILURE);
+}
 
-void config_load(struct config *c, const char *path);
+void die_error(int err, const char *fmt, ...)
+{
+    va_list args;
 
-const char *
-config_get_str(const struct config *c, const char *key, const char *sub);
+    va_start(args, fmt);
 
-int config_get_int(const struct config *c, const char *str, int sub);
+    fprintf(stderr, "wlmenu: ");
+    vfprintf(stderr, fmt, args);
 
-uint32_t config_get_u32(const struct config *c, const char *key, uint32_t sub);
+    va_end(args);
 
-double config_get_double(const struct config *c, const char *str, double sub);
+    if (err > 0) {
+        char buf[128];
 
-#endif /* CONFIG_H_ */
+        fprintf(stderr, " - %s", strerror_r(err, buf, sizeof(buf)));
+    }
+
+    fprintf(stderr, "\n");
+
+    exit(EXIT_FAILURE);
+}

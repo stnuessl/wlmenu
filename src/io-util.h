@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2018 Steffen Nuessle
+ * Copyright (c) 2019 Steffen Nuessle
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,39 +22,9 @@
  * SOFTWARE.
  */
 
-#ifndef CONFIG_H_
-#define CONFIG_H_
+#ifndef IO_UTIL_H_
+#define IO_UTIL_H_
 
-#include <stddef.h>
-#include <stdint.h>
+int io_util_read(int fd, void *buf, size_t size);
 
-struct config_entry {
-    const char *section;
-    const char *key;
-    const char *value;
-};
-
-struct config {
-    char *mem;
-
-    struct config_entry *entries;
-    int n;
-    int size;
-};
-
-void config_init(struct config *c);
-
-void config_destroy(struct config *c);
-
-void config_load(struct config *c, const char *path);
-
-const char *
-config_get_str(const struct config *c, const char *key, const char *sub);
-
-int config_get_int(const struct config *c, const char *str, int sub);
-
-uint32_t config_get_u32(const struct config *c, const char *key, uint32_t sub);
-
-double config_get_double(const struct config *c, const char *str, double sub);
-
-#endif /* CONFIG_H_ */
+#endif /* IO_UTIL_H_ */

@@ -133,6 +133,5 @@ void xkb_state_update(struct xkb *xkb,
 
 bool xkb_keysym_is_modifier(xkb_keysym_t symbol)
 {
-   return symbol >= XKB_KEY_Shift_L && symbol <= XKB_KEY_Hyper_R;
+    return symbol >= XKB_KEY_Shift_L && symbol <= XKB_KEY_Hyper_R;
 }
-

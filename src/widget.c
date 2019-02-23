@@ -22,17 +22,16 @@
  * SOFTWARE.
  */
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
 #include <cairo-ft.h>
 
+#include "array-util.h"
+#include "die.h"
 #include "widget.h"
 #include "xmalloc.h"
-#include "proc-util.h"
-
-#define ARRAY_SIZE(x) (sizeof((x)) / sizeof(*(x)))
 
 #define GLYPH_BUFFER_SIZE 64
 
@@ -67,10 +66,10 @@ static void cairo_util_show_glyphs(cairo_t *cairo,
 
 static void color_set(struct color *c, uint32_t rgba)
 {
-    c->red   = (double) ((rgba & 0xff000000) >> 24) / 255.0;
+    c->red = (double) ((rgba & 0xff000000) >> 24) / 255.0;
     c->green = (double) ((rgba & 0x00ff0000) >> 16) / 255.0;
-    c->blue  = (double) ((rgba & 0x0000ff00) >>  8) / 255.0;
-    c->alpha = (double)  (rgba & 0x000000ff)        / 255.0;
+    c->blue = (double) ((rgba & 0x0000ff00) >> 8) / 255.0;
+    c->alpha = (double) (rgba & 0x000000ff) / 255.0;
 }
 
 static void widget_configure_font(struct widget *w, cairo_font_extents_t *ex)
@@ -100,7 +99,7 @@ static void widget_configure_font(struct widget *w, cairo_font_extents_t *ex)
     cairo_font_face_destroy(face);
 }
 
-static void widget_show_text(struct widget *w, 
+static void widget_show_text(struct widget *w,
                              int32_t x,
                              int32_t y,
                              const char *str,
@@ -142,7 +141,7 @@ static void widget_show_text(struct widget *w,
             w->n_glyphs = n_glyphs;
 
             return;
-        } 
+        }
 
         cairo_glyph_free(glyphs);
     }
@@ -155,35 +154,35 @@ static void widget_draw_output(struct widget *w)
     int32_t width = w->output.width;
     int32_t height = w->row_height;
 
-    if (w->highlight >= w->n_rows)
-        w->highlight = w->n_rows - 1;
+    if (w->selected >= w->n_rows)
+        w->selected = w->n_rows - 1;
 
-    for (size_t i = 0; i < w->n_rows; ++i) {
+    for (int i = 0; i < w->n_rows; ++i) {
         int32_t yh = y + height / 2;
         size_t len = strlen(w->rows[i]);
 
-        if (i == w->highlight) {
-            cairo_util_set_source(w->cr, &w->highlight_background);
-            cairo_rectangle(w->cr, x, y, width, height);
-            cairo_fill(w->cr);
-            
-            cairo_util_set_source(w->cr, &w->highlight_foreground);
-            widget_show_text(w, x, yh, w->rows[i], len, w->max_glyphs_output); 
-        } else {
-            cairo_util_set_source(w->cr, &w->background);
+        if (i == w->selected) {
+            cairo_util_set_source(w->cr, &w->focus_background);
             cairo_rectangle(w->cr, x, y, width, height);
             cairo_fill(w->cr);
 
-            cairo_util_set_source(w->cr, &w->foreground);
+            cairo_util_set_source(w->cr, &w->focus_foreground);
+            widget_show_text(w, x, yh, w->rows[i], len, w->max_glyphs_output);
+        } else {
+            cairo_util_set_source(w->cr, &w->default_background);
+            cairo_rectangle(w->cr, x, y, width, height);
+            cairo_fill(w->cr);
+
+            cairo_util_set_source(w->cr, &w->default_foreground);
             widget_show_text(w, x, yh, w->rows[i], len, w->max_glyphs_output);
         }
 
         y += height;
     }
 
-    cairo_util_set_source(w->cr, &w->background);
+    cairo_util_set_source(w->cr, &w->default_background);
 
-    for (size_t i = w->n_rows; i < w->max_rows; ++i) {
+    for (int i = w->n_rows; i < w->max_rows; ++i) {
         cairo_rectangle(w->cr, x, y, width, height);
 
         y += height;
@@ -191,31 +190,30 @@ static void widget_draw_output(struct widget *w)
 
     cairo_fill(w->cr);
 
-    cairo_util_set_source(w->cr, &w->border);
+    cairo_util_set_source(w->cr, &w->color_borders);
     cairo_util_rectangle(w->cr, &w->output);
     cairo_set_line_width(w->cr, 2.0);
     cairo_stroke(w->cr);
 }
-
 
 static void widget_draw_input(struct widget *w)
 {
     int32_t x = w->input.x;
     int32_t y = w->input.y + w->input.height / 2;
 
-    cairo_util_set_source(w->cr, &w->background);
+    cairo_util_set_source(w->cr, &w->default_background);
     cairo_util_rectangle(w->cr, &w->input);
     cairo_fill_preserve(w->cr);
 
-    cairo_util_set_source(w->cr, &w->border);
+    cairo_util_set_source(w->cr, &w->color_borders);
     cairo_set_line_width(w->cr, 2.0);
     cairo_stroke(w->cr);
 
     w->str[w->len++] = '_';
 
-    cairo_util_set_source(w->cr, &w->foreground);
+    cairo_util_set_source(w->cr, &w->default_foreground);
     widget_show_text(w, x, y, w->str, w->len, w->max_glyphs_input);
-    
+
     w->str[--w->len] = '\0';
 }
 
@@ -231,7 +229,7 @@ void widget_init(struct widget *w)
 
     w->rows = xmalloc(10 * sizeof(*w->rows));
     w->max_rows = 10;
-        
+
     w->glyphs = xmalloc(GLYPH_BUFFER_SIZE * sizeof(*w->glyphs));
     w->n_glyphs = GLYPH_BUFFER_SIZE;
 }
@@ -267,17 +265,14 @@ void widget_set_font_size(struct widget *w, double size)
     w->font_size = size;
 }
 
-void widget_set_max_rows(struct widget *w, size_t max_rows)
+void widget_set_max_rows(struct widget *w, int max_rows)
 {
     w->rows = xrealloc(w->rows, max_rows * sizeof(*w->rows));
     w->max_rows = max_rows;
 }
 
-void widget_configure(struct widget *w,
-                      void *mem,
-                      int32_t width,
-                      int32_t height,
-                      int32_t stride)
+void widget_configure(
+    struct widget *w, void *mem, int32_t width, int32_t height, int32_t stride)
 {
     cairo_surface_t *surface;
     cairo_font_extents_t ex;
@@ -308,9 +303,9 @@ void widget_configure(struct widget *w,
 
     cairo_set_source_rgba(w->cr, 0.0, 0.0, 0.0, 0.0);
     cairo_paint(w->cr);
-    
+
     widget_configure_font(w, &ex);
-    
+
     w->row_height = 11 * ex.height / 10;
 
     w->output.width = width / 3.0;
@@ -366,24 +361,24 @@ void widget_remove_char(struct widget *w)
         w->str[--w->len] = '\0';
 }
 
-const char *widget_highlight(const struct widget *w)
+const char *widget_selected_item(const struct widget *w)
 {
     if (!w->n_rows)
         return NULL;
 
-    return w->rows[w->highlight];
+    return w->rows[w->selected];
 }
 
-void widget_highlight_up(struct widget *w)
+void widget_selected_item_up(struct widget *w)
 {
-    if (w->highlight)
-        --w->highlight;
+    if (w->selected)
+        --w->selected;
 }
 
-void widget_highlight_down(struct widget *w)
+void widget_selected_item_down(struct widget *w)
 {
-    if (w->highlight < w->n_rows)
-        ++w->highlight;
+    if (w->selected < w->n_rows)
+        ++w->selected;
 }
 
 void widget_insert_row(struct widget *w, char *str)
@@ -407,29 +402,29 @@ void widget_clear_rows(struct widget *w)
     w->n_rows = 0;
 }
 
-void widget_set_foreground(struct widget *w, uint32_t rgba)
+void widget_set_default_foreground(struct widget *w, uint32_t rgba)
 {
-    color_set(&w->foreground, rgba);
+    color_set(&w->default_foreground, rgba);
 }
 
-void widget_set_background(struct widget *w, uint32_t rgba)
+void widget_set_default_background(struct widget *w, uint32_t rgba)
 {
-    color_set(&w->background, rgba);
+    color_set(&w->default_background, rgba);
 }
 
-void widget_set_highlight_foreground(struct widget *w, uint32_t rgba)
+void widget_set_focus_foreground(struct widget *w, uint32_t rgba)
 {
-    color_set(&w->highlight_foreground, rgba);
+    color_set(&w->focus_foreground, rgba);
 }
 
-void widget_set_highlight_background(struct widget *w, uint32_t rgba)
+void widget_set_focus_background(struct widget *w, uint32_t rgba)
 {
-    color_set(&w->highlight_background, rgba);
+    color_set(&w->focus_background, rgba);
 }
 
-void widget_set_border(struct widget *w, uint32_t rgba)
+void widget_set_color_borders(struct widget *w, uint32_t rgba)
 {
-    color_set(&w->border, rgba);
+    color_set(&w->color_borders, rgba);
 }
 
 void widget_area(const struct widget *w, struct rectangle *rect)
@@ -446,4 +441,3 @@ void widget_area(const struct widget *w, struct rectangle *rect)
     rect->width = ((xw1 > xw2) ? xw1 : xw2) - x;
     rect->height = ((yh1 > yh2) ? yh1 : yh2) - y;
 }
-

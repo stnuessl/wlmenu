@@ -27,8 +27,9 @@
 
 #include <wayland-client.h>
 
-#include "xkb.h"
+#include "config.h"
 #include "widget.h"
+#include "xkb.h"
 
 #include "load.h"
 
@@ -45,7 +46,7 @@ struct wlmenu {
     struct wl_seat *seat;
     struct wl_keyboard *keyboard;
     struct wl_output *output;
-    
+
     /* Window related wayland objects */
     struct wl_surface *surface;
     struct wl_shell_surface *shell_surface;
@@ -79,7 +80,6 @@ struct wlmenu {
     uint8_t show : 1;
     uint8_t released : 1;
     uint8_t dirty : 1;
-    uint8_t quit : 1;
 };
 
 void wlmenu_init(struct wlmenu *w, const char *display_name);
@@ -94,8 +94,10 @@ struct widget *wlmenu_widget(struct wlmenu *w);
 
 void wlmenu_set_items(struct wlmenu *w, struct item *items, size_t size);
 
+void wlmenu_set_config(struct wlmenu *w, const struct config *c);
+
 void wlmenu_show(struct wlmenu *w);
 
-void wlmenu_mainloop(struct wlmenu *w);
+void wlmenu_run(struct wlmenu *w);
 
 #endif /* WLMENU_H_ */

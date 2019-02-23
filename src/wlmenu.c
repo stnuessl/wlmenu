@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+#include <ctype.h>
 #include <errno.h>
 #include <linux/memfd.h>
 #include <string.h>
@@ -30,13 +31,11 @@
 #include <sys/timerfd.h>
 #include <time.h>
 #include <unistd.h>
-#include <ctype.h>
 
 #include "wlmenu.h"
 
-#include "proc-util.h"
-
-#define ARRAY_SIZE(x) (sizeof((x)) / sizeof(*(x)))
+#include "array-util.h"
+#include "die.h"
 
 static void wlmenu_draw(struct wlmenu *w)
 {
@@ -49,14 +48,13 @@ static void wlmenu_draw(struct wlmenu *w)
 
     widget_draw(&w->widget);
     widget_area(&w->widget, &a);
-    
+
     wl_surface_damage_buffer(w->surface, a.x, a.y, a.width, a.height);
     wl_surface_attach(w->surface, w->buffer, 0, 0);
     wl_surface_commit(w->surface);
 
     w->released = false;
 }
-
 
 static void buffer_release(void *data, struct wl_buffer *buffer)
 {
@@ -125,15 +123,15 @@ static void shell_surface_configure(void *data,
 
     (void) edges;
 
+    if (width <= 0 || height <= 0)
+        return;
+
     if (w->shell_surface != shell_surface)
         die("shell_surface_configure(): invalid shell surface\n");
 
     if (w->width == width && w->height == height)
         return;
 
-    if (width < 0 || height < 0)
-        die("Invalid window configuration parameters\n");
-    
     if (w->buffer)
         wl_buffer_destroy(w->buffer);
 
@@ -150,15 +148,15 @@ static void shell_surface_configure(void *data,
 
     fd = memfd_create("wlmenu-shm", MFD_CLOEXEC);
     if (fd < 0)
-        die_error(errno, "Failed to create shared memory region");
+        die_error(errno, "Failed to create surface memory region");
 
     err = ftruncate(fd, w->size);
     if (err < 0)
-        die_error(errno, "ftruncate(): Failed to resize shared memory region");
+        die_error(errno, "Failed to resize surface memory region");
 
     w->mem = mmap(NULL, w->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (w->mem == MAP_FAILED)
-        die_error(errno, "mmap(): Failed to memory map shared memory region");
+        die_error(errno, "Failed to memory map surface memory region");
 
     pool = wl_shm_create_pool(w->shm, fd, w->size);
     if (!pool)
@@ -297,13 +295,12 @@ static void wlmenu_select_items(struct wlmenu *w)
     }
 }
 
-__attribute__((noreturn))
-static void wlmenu_launch_item(const struct wlmenu *w)
+__attribute__((noreturn)) static void wlmenu_launch_item(const struct wlmenu *w)
 {
     const char *file;
     char *args[2];
 
-    file = widget_highlight(&w->widget);
+    file = widget_selected_item(&w->widget);
     if (!file)
         exit(EXIT_SUCCESS);
 
@@ -335,9 +332,11 @@ static void wlmenu_dispatch_key_event(struct wlmenu *w, xkb_keysym_t symbol)
         return;
     }
 
+    printf("key %x\n", symbol);
+
     switch (symbol) {
     case XKB_KEY_Escape:
-        w->quit = true;
+        exit(EXIT_SUCCESS);
         break;
     case XKB_KEY_Return:
         wlmenu_launch_item(w);
@@ -349,17 +348,29 @@ static void wlmenu_dispatch_key_event(struct wlmenu *w, xkb_keysym_t symbol)
         break;
     case XKB_KEY_ISO_Left_Tab:
     case XKB_KEY_Up:
-        widget_highlight_up(&w->widget);
+        widget_selected_item_up(&w->widget);
         break;
     case XKB_KEY_Tab:
     case XKB_KEY_Down:
-        widget_highlight_down(&w->widget);
+        widget_selected_item_down(&w->widget);
+        break;
+    case XKB_KEY_Home:
+        widget_selected_item_up(&w->widget);
+        break;
+    case XKB_KEY_End:
+        widget_selected_item_down(&w->widget);
+        break;
+    case XKB_KEY_Page_Up:
+        widget_selected_item_up(&w->widget);
+        break;
+    case XKB_KEY_Page_Down:
+        widget_selected_item_down(&w->widget);
         break;
     case XKB_KEY_NoSymbol:
         break;
     default:
         widget_insert_char(&w->widget, (int) symbol);
-        
+
         wlmenu_select_items(w);
         break;
     }
@@ -447,7 +458,7 @@ static void keyboard_key(void *data,
 
     symbol = xkb_get_sym(&w->xkb, key);
 
-    /* Modifier keys are handled by the "keyboard_modifiers" function */ 
+    /* Modifier keys are handled by the "keyboard_modifiers" function */
     if (xkb_keysym_is_modifier(symbol))
         return;
 
@@ -467,11 +478,11 @@ static void keyboard_key(void *data,
         w->symbol = symbol;
         break;
     case WL_KEYBOARD_KEY_STATE_RELEASED:
-        /* 
-         * If multiple keys are pressed down the last pressed button 
-         * is effectivly in control of the key repeat timer. 
+        /*
+         * If multiple keys are pressed down the last pressed button
+         * is effectivly in control of the key repeat timer.
          * The timer has to be stopped on the keys release.
-         */ 
+         */
         if (symbol == w->symbol) {
             its.it_value.tv_sec = 0;
             its.it_value.tv_nsec = 0;
@@ -625,12 +636,12 @@ static void registry_add(void *data,
         wlmenu_bind_subcompositor(w, name, version);
         return;
     }
-    
+
     if (strcmp(interface, "wl_shell") == 0) {
         wlmenu_bind_shell(w, name, version);
         return;
     }
-    
+
     if (strcmp(interface, "wl_shm") == 0) {
         wlmenu_bind_shm(w, name, version);
         return;
@@ -660,36 +671,6 @@ registry_remove(void *data, struct wl_registry *registry, uint32_t name)
 static const struct wl_registry_listener registry_listener = {
     .global = &registry_add,
     .global_remove = &registry_remove,
-};
-
-static void display_error(void *data,
-                          struct wl_display *display,
-                          void *object_id,
-                          uint32_t code,
-                          const char *message)
-{
-    struct wlmenu *w = data;
-
-    (void) w;
-    (void) display;
-
-    printf("%s - %d id: 0x%p\n", message, code, object_id);
-}
-
-static void display_delete_id(void *data, 
-                              struct wl_display *display, 
-                              uint32_t id)
-{
-    struct wlmenu *w = data;
-
-    (void) w;
-    (void) display;
-    (void) id;
-}
-
-static struct wl_display_listener display_listener = {
-    .error = &display_error,
-    .delete_id = &display_delete_id,
 };
 
 static void wlmenu_repeat_key(struct wlmenu *w)
@@ -759,8 +740,6 @@ void wlmenu_init(struct wlmenu *w, const char *display_name)
     if (!w->display)
         die_error(errno, "Failed to connect to display manager");
 
-//    wl_display_add_listener(w->display, &display_listener, w);
-
     w->registry = wl_display_get_registry(w->display);
     if (!w->registry)
         die("Failed to create registry for binding to server interfaces\n");
@@ -794,7 +773,7 @@ void wlmenu_init(struct wlmenu *w, const char *display_name)
     w->shell_surface = wl_shell_get_shell_surface(w->shell, w->surface);
     if (!w->shell_surface)
         die("Failed to create application window\n");
-    
+
     wl_surface_add_listener(w->surface, &surface_listener, w);
     wl_shell_surface_add_listener(w->shell_surface, &shell_surface_listener, w);
 
@@ -863,25 +842,60 @@ void wlmenu_set_items(struct wlmenu *w, struct item *items, size_t size)
         widget_insert_row(&w->widget, w->items[i].name);
 }
 
+void wlmenu_set_config(struct wlmenu *w, const struct config *c)
+{
+    struct widget *widget = wlmenu_widget(w);
+    uint32_t fg1, bg1, bd, fg2, bg2;
+    int rows;
+    const char *font;
+    double fsize;
+
+    fg1 = config_get_u32(c, "default.foreground", 0xCCCCCCFF);
+    bg1 = config_get_u32(c, "default.background", 0x282828FF);
+    bd = config_get_u32(c, "default.border", 0xCCCCCCFF);
+    fg2 = config_get_u32(c, "focus.foreground", 0x282828FF);
+    bg2 = config_get_u32(c, "focus.background", 0xCCCCCCFF);
+
+    rows = config_get_int(c, "gui.rows", 16);
+
+    font = config_get_str(c, "font.font", "/usr/share/fonts/TTF/VeraMono.ttf");
+    fsize = config_get_double(c, "font.size", 16.0);
+
+    widget_set_default_foreground(widget, fg1);
+    widget_set_default_background(widget, bg1);
+    widget_set_color_borders(widget, bd);
+    widget_set_focus_foreground(widget, fg2);
+    widget_set_focus_background(widget, bg2);
+
+    widget_set_max_rows(widget, rows);
+
+    widget_set_font(widget, font);
+    widget_set_font_size(widget, fsize);
+}
+
 void wlmenu_show(struct wlmenu *w)
 {
     wl_shell_surface_set_toplevel(w->shell_surface);
 }
 
-void wlmenu_mainloop(struct wlmenu *w)
+void wlmenu_run(struct wlmenu *w)
 {
     struct epoll_event events[2];
     struct timespec begin, end;
     uint64_t elapsed;
 
-    while (!w->quit) {
+    while (1) {
         int n;
 
         wl_display_flush(w->display);
 
         n = epoll_wait(w->epoll_fd, events, ARRAY_SIZE(events), -1);
-        if (n < 0 && errno != EINTR)
-            die_error(errno, "epoll_wait()");
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+
+            die_error(errno, "Failed dispatching wlmenu mainloop events");
+        }
 
         printf("Processing %d event(s)... ", n);
 
@@ -891,9 +905,9 @@ void wlmenu_mainloop(struct wlmenu *w)
             ((struct wlmenu_event *) events[n].data.ptr)->run(w);
 
         clock_gettime(CLOCK_MONOTONIC, &end);
-        
-        elapsed = 1000000000ul * (end.tv_sec - begin.tv_sec)
-                + (end.tv_nsec - begin.tv_nsec);
+
+        elapsed = 1000000000ul * (end.tv_sec - begin.tv_sec) +
+                  (end.tv_nsec - begin.tv_nsec);
 
         printf("%lu us / %lu ms\n", elapsed / 1000, elapsed / 1000000);
     }

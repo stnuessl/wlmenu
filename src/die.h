@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef PROC_UTIL_H_
-#define PROC_UTIL_H_
+#ifndef DIE_H_
+#define DIE_H_
 
 #define die_oom() die("%s(): Failed to allocate memory\n", __func__)
 
@@ -32,4 +32,4 @@ void die(const char *fmt, ...) __attribute__((noreturn, format(printf, 1, 2)));
 void die_error(int err, const char *fmt, ...)
     __attribute__((noreturn, format(printf, 2, 3)));
 
-#endif /* PROC_UTIL_H_ */
+#endif /* DIE_H_ */

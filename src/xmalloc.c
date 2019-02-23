@@ -24,7 +24,7 @@
 
 #include <stdlib.h>
 
-#include "proc-util.h"
+#include "die.h"
 
 void *xmalloc(size_t n)
 {
@@ -52,4 +52,3 @@ void *xrealloc(void *mem, size_t n)
 
     return mem;
 }
-
