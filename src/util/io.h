@@ -22,9 +22,9 @@
  * SOFTWARE.
  */
 
-#ifndef IO_UTIL_H_
-#define IO_UTIL_H_
+#ifndef IO_H_
+#define IO_H_
 
-int io_util_read(int fd, void *buf, size_t size);
+int io_read(int fd, void *buf, size_t size);
 
-#endif /* IO_UTIL_H_ */
+#endif /* IO_H_ */

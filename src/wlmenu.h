@@ -30,7 +30,6 @@
 #include "config.h"
 #include "widget.h"
 #include "xkb.h"
-
 #include "load.h"
 
 struct wlmenu {

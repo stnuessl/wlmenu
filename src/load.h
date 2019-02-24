@@ -29,7 +29,7 @@
 
 struct item {
     char *name;
-    size_t hits;
+    size_t mlen;
 };
 
 void load(struct item **list, size_t *size);

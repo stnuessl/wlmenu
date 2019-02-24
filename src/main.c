@@ -35,8 +35,9 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "util/die.h"
+
 #include "config.h"
-#include "die.h"
 #include "load.h"
 #include "wlmenu.h"
 

@@ -32,14 +32,15 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "util/die.h"
+#include "util/io.h"
+#include "util/xalloc.h"
+
 #include "config.h"
-#include "die.h"
-#include "io-util.h"
-#include "xmalloc.h"
 
 struct parser {
     struct config *config;
-    const char *file;
+    const char *path;
     int line;
     char *cur;
 };
@@ -208,7 +209,7 @@ static void parser_end_line(struct parser *parser)
             if (!isblank(*parser->cur)) {
                 die("config: %s:%d: invalid non-space character \"%c\" at "
                     "end of line.\n",
-                    parser->file, parser->line, *parser->cur);
+                    parser->path, parser->line, *parser->cur);
             }
 
             break;
@@ -231,18 +232,18 @@ static const char *parser_read_section_name(struct parser *parser)
         case ';':
         case '#':
             die("config: %s:%d: invalid comment in section definition\n",
-                parser->file, parser->line);
+                parser->path, parser->line);
         case '\n':
             die("config: %s:%d: invalid newline in section definition\n",
-                parser->file, parser->line);
+                parser->path, parser->line);
         case '\0':
             die("config: %s:%d: unexpected end of file in section definition\n",
-                parser->file, parser->line);
+                parser->path, parser->line);
         default:
             if (!isalpha(*parser->cur)) {
                 die("config: %s:%d: section names must begin with an "
                     "alphabetic character ([a-zA-Z]).\n",
-                    parser->file, parser->line);
+                    parser->path, parser->line);
             }
 
             section = parser->cur;
@@ -260,15 +261,15 @@ static const char *parser_read_section_name(struct parser *parser)
         case ';':
         case '#':
             die("config: %s:%d: invalid comment \"%c\" after section name\n",
-                parser->file, parser->line, *parser->cur);
+                parser->path, parser->line, *parser->cur);
         case '\n':
             die("config: %s:%d: invalid newline before ending of section "
                 "definition\n",
-                parser->file, parser->line);
+                parser->path, parser->line);
         case '\0':
             die("config: %s:%d: unexpected end of line before ending of "
                 "section \"%s\"\n",
-                parser->file, parser->line, section);
+                parser->path, parser->line, section);
         case ']':
             *parser->cur++ = '\0';
             parser_end_line(parser);
@@ -277,7 +278,7 @@ static const char *parser_read_section_name(struct parser *parser)
             if (!isblank(*parser->cur)) {
                 die("config: %s:%d: invalid character \"%c\" at end of "
                     "section name\n",
-                    parser->file, parser->line, *parser->cur);
+                    parser->path, parser->line, *parser->cur);
             }
 
             *parser->cur++ = '\0';
@@ -288,7 +289,7 @@ static const char *parser_read_section_name(struct parser *parser)
             if (*parser->cur++ != ']') {
                 die("config: %s:%d: invalid character \"%c\" at end of "
                     "section \"%s\" definition - expected \"]\"\n",
-                    parser->file, parser->line, *parser->cur, section);
+                    parser->path, parser->line, *parser->cur, section);
             }
 
             parser_end_line(parser);
@@ -308,10 +309,10 @@ static const char *parser_read_key(struct parser *parser)
         case ';':
         case '#':
             die("config: %s:%d: invalid comment in key definition\n",
-                parser->file, parser->line);
+                parser->path, parser->line);
         case '\n':
             die("config: %s:%d: invalid newline character in key definition\n",
-                parser->file, parser->line);
+                parser->path, parser->line);
         case ' ':
         case '\t':
             *parser->cur++ = '\0';
@@ -330,12 +331,12 @@ static const char *parser_read_key(struct parser *parser)
         case '\0':
             die("config: %s:%d: unexpected end of file while parsing key "
                 "\"%s\"\n",
-                parser->file, parser->line, key);
+                parser->path, parser->line, key);
         default:
             if (!isalnum(*parser->cur)) {
                 die("config: %s:%d: invalid non-alphanumeric ([a-zA-Z0-9]) "
                     "character \"%c\" in definition of key\n",
-                    parser->file, parser->line, *parser->cur);
+                    parser->path, parser->line, *parser->cur);
             }
 
             break;
@@ -354,15 +355,15 @@ static const char *parser_read_value(struct parser *parser)
         case ';':
         case '#':
             die("config: %s:%d: invalid comment in value definition\n",
-                parser->file, parser->line);
+                parser->path, parser->line);
         case '\n':
             die("config: %s:%d: invalid newline character in definition of "
                 "value\n",
-                parser->file, parser->line);
+                parser->path, parser->line);
         case '\0':
             die("config: %s:%d: unexpected end of file while parsing value "
                 "\"%s\"\n",
-                parser->file, parser->line, value);
+                parser->path, parser->line, value);
         default:
             if (isblank(*parser->cur))
                 break;
@@ -370,7 +371,7 @@ static const char *parser_read_value(struct parser *parser)
             if (!isgraph(*parser->cur)) {
                 die("config: %s:%d: invalid non-graphical character \"%c\" "
                     "at start of value definition\n",
-                    parser->file, parser->line, *parser->cur);
+                    parser->path, parser->line, *parser->cur);
             }
 
             value = parser->cur;
@@ -404,7 +405,7 @@ static const char *parser_read_value(struct parser *parser)
             if (!isgraph(*parser->cur)) {
                 die("config: %s:%d: invalid non-graphical character \"%c\" "
                     "in definition of value\n",
-                    parser->file, parser->line, *parser->cur);
+                    parser->path, parser->line, *parser->cur);
             }
 
             break;
@@ -441,7 +442,7 @@ static void parser_read_section(struct parser *parser)
                 if (!isalpha(*parser->cur)) {
                     die("config: %s:%d: invalid non-alphabetic ([a-zA-Z]) "
                         "first character \"%c\" for key\n",
-                        parser->file, parser->line, *parser->cur);
+                        parser->path, parser->line, *parser->cur);
                 }
 
                 key = parser_read_key(parser);
@@ -463,7 +464,7 @@ static void config_do_load(struct config *c, const char *path)
 
     parser.config = c;
     parser.cur = c->mem;
-    parser.file = path;
+    parser.path = path;
     parser.line = 1;
 
     while (1) {
@@ -484,6 +485,11 @@ static void config_do_load(struct config *c, const char *path)
         case '\0':
             return;
         default:
+            die("config: %s:%d: invalid character \"%c\" outside of any "
+                "section\n",
+                parser.path,
+                parser.line,
+                parser.cur[-1]);
             break;
         }
     }
@@ -526,7 +532,7 @@ void config_load(struct config *c, const char *path)
     /* Read in configuration file as a string */
     c->mem = xmalloc(st.st_size + 1);
 
-    err = io_util_read(fd, c->mem, st.st_size);
+    err = io_read(fd, c->mem, st.st_size);
     if (err < 0)
         die_error(errno, "Failed to read configuration file \"%s\"", path);
 

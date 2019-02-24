@@ -32,10 +32,10 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "wlmenu.h"
+#include "util/array.h"
+#include "util/die.h"
 
-#include "array-util.h"
-#include "die.h"
+#include "wlmenu.h"
 
 static void wlmenu_draw(struct wlmenu *w)
 {
@@ -275,7 +275,7 @@ static void wlmenu_select_items(struct wlmenu *w)
 
     if (!len) {
         for (size_t i = 0; i < w->n; ++i) {
-            w->items[i].hits = 0;
+            w->items[i].mlen = 0;
 
             if (widget_has_empty_row(&w->widget))
                 widget_insert_row(&w->widget, w->items[i].name);
@@ -285,12 +285,20 @@ static void wlmenu_select_items(struct wlmenu *w)
     }
 
     for (size_t i = 0; i < w->n; ++i) {
-        int diff = len - w->items[i].hits;
+        int diff = len - w->items[i].mlen;
 
-        if (abs(diff) == 1 && strcasestr(w->items[i].name, input))
-            w->items[i].hits = len;
-
-        if (w->items[i].hits == len && widget_has_empty_row(&w->widget))
+        /* 
+         * Because this function is called for each added or removed character
+         * only the items with a match length difference of +1 or -1 can
+         * further match the input.
+         */
+        if (diff == 1 && strcasestr(w->items[i].name, input))
+            w->items[i].mlen = len;
+        else if (diff == -1 && w->items[i].mlen > len)
+            w->items[i].mlen = len;
+        
+        /* If the item matches and there is still an empty row we display it */
+        if (w->items[i].mlen == len && widget_has_empty_row(&w->widget))
             widget_insert_row(&w->widget, w->items[i].name);
     }
 }
@@ -331,8 +339,6 @@ static void wlmenu_dispatch_key_event(struct wlmenu *w, xkb_keysym_t symbol)
         wlmenu_draw(w);
         return;
     }
-
-    printf("key %x\n", symbol);
 
     switch (symbol) {
     case XKB_KEY_Escape:

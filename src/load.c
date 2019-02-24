@@ -34,10 +34,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "die.h"
-#include "io-util.h"
-#include "xmalloc.h"
-#include "xstring.h"
+#include "util/die.h"
+#include "util/io.h"
+#include "util/xalloc.h"
 
 #include "load.h"
 
@@ -207,7 +206,7 @@ static int cache_read_data_str(int fd, const char *path, char **data)
     /* Read in the whole file as a string */
     *data = xmalloc((size_t) stat_cache.st_size + 1);
 
-    err = io_util_read(fd, *data, stat_cache.st_size);
+    err = io_read(fd, *data, stat_cache.st_size);
     if (err < 0)
         return err;
 
@@ -258,14 +257,14 @@ do_cache_read(int fd, const char *path, struct item **items, size_t *size)
         if (data)
             *data++ = '\0';
 
-        if (!strlen(str))
+        if (*str == '\0')
             continue;
 
         if (n >= n_max)
             return -EINVAL;
 
-        (*items)[n].hits = 0;
         (*items)[n].name = str;
+        (*items)[n].mlen= 0;
 
         ++n;
     }
@@ -359,8 +358,8 @@ static void do_path_load(const char *path,
                 *items = xrealloc(*items, n_max * sizeof(**items));
             }
 
-            (*items)[n].hits = 0;
             (*items)[n].name = xstrdup(entry->d_name);
+            (*items)[n].mlen = 0;
 
             ++n;
         }
@@ -449,8 +448,8 @@ static void load_from_stdin(struct item **items, size_t *size)
             *items = xrealloc(*items, n_max * sizeof(**items));
         }
 
-        (*items)[n].hits = 0;
         (*items)[n].name = str;
+        (*items)[n].mlen = 0;
 
         ++n;
     }

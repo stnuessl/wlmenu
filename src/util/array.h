@@ -22,9 +22,9 @@
  * SOFTWARE.
  */
 
-#ifndef XSTRING_H_
-#define XSTRING_H_
+#ifndef ARRAY_H_
+#define ARRAY_H_
 
-char *xstrdup(const char *s);
+#define ARRAY_SIZE(x) (sizeof((x)) / sizeof(*(x)))
 
-#endif /* XSTRING_H_*/
+#endif /* ARRAY_H_ */

@@ -23,7 +23,9 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
+#include "xalloc.h"
 #include "die.h"
 
 void *xmalloc(size_t n)
@@ -52,3 +54,13 @@ void *xrealloc(void *mem, size_t n)
 
     return mem;
 }
+
+char *xstrdup(const char *s)
+{
+    char *dup = strdup(s);
+    if (!dup)
+        die_oom();
+
+    return dup;
+}
+

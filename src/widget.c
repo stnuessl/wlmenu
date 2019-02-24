@@ -28,10 +28,11 @@
 
 #include <cairo-ft.h>
 
-#include "array-util.h"
-#include "die.h"
+#include "util/array.h"
+#include "util/die.h"
+#include "util/xalloc.h"
+
 #include "widget.h"
-#include "xmalloc.h"
 
 #define GLYPH_BUFFER_SIZE 64
 
@@ -154,8 +155,14 @@ static void widget_draw_output(struct widget *w)
     int32_t width = w->output.width;
     int32_t height = w->row_height;
 
+    /* 
+     * Make sure the selected item is always within the array bounds and
+     * that it selects an item if there is at least on item in the array.
+     */
     if (w->selected >= w->n_rows)
         w->selected = w->n_rows - 1;
+    else if (w->n_rows && w->selected < 0)
+        w->selected = 0;
 
     for (int i = 0; i < w->n_rows; ++i) {
         int32_t yh = y + height / 2;

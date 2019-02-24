@@ -22,9 +22,26 @@
  * SOFTWARE.
  */
 
-#ifndef ARRAY_UTIL_H_
-#define ARRAY_UTIL_H_
+#include <errno.h>
+#include <unistd.h>
 
-#define ARRAY_SIZE(x) (sizeof((x)) / sizeof(*(x)))
+#include "io.h"
 
-#endif /* ARRAY_UTIL_H_ */
+int io_read(int fd, void *buf, size_t size)
+{
+    size_t n = 0;
+
+    do {
+        ssize_t m = read(fd, (char *) buf + n, size - n);
+        if (m < 0) {
+            if (errno == EINTR)
+                continue;
+
+            return -errno;
+        }
+
+        n += m;
+    } while (n < size);
+
+    return 0;
+}

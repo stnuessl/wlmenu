@@ -22,16 +22,17 @@
  * SOFTWARE.
  */
 
-#include <string.h>
+#ifndef XALLOC_H_
+#define XALLOC_H_
 
-#include "die.h"
-#include "xstring.h"
+#include <stddef.h>
 
-char *xstrdup(const char *s)
-{
-    char *dup = strdup(s);
-    if (!dup)
-        die_oom();
+void *xmalloc(size_t n);
 
-    return dup;
-}
+void *xcalloc(size_t n, size_t size);
+
+void *xrealloc(void *mem, size_t n);
+
+char *xstrdup(const char *s);
+
+#endif /* XALLOC_H_ */
