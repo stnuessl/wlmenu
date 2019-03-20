@@ -22,42 +22,68 @@
  * SOFTWARE.
  */
 
-#ifndef CONFIG_H_
-#define CONFIG_H_
+#include <stdlib.h>
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "string-util.h"
 
-struct config_entry {
-    const char *section;
-    const char *key;
-    const char *value;
-};
+char *strconcat(const char **array, int size)
+{
+    char *s;
+    size_t n = 1;
 
-struct config {
-    char *mem;
+    for (int i = 0; i < size; ++i)
+        n += strlen(array[i]);
 
-    struct config_entry *entries;
-    int n;
-    int size;
-};
+    s = malloc(n);
+    if (!s)
+        return NULL;
 
-void config_init(struct config *c);
+    n = 0;
 
-void config_destroy(struct config *c);
+    for (int i = 0; i < size; ++i) {
+        size_t len = strlen(array[i]);
 
-void config_load(struct config *c, const char *path);
+        memcpy(s + n, array[i], len);
+        n += len;
+    }
 
-const char *
-config_get_str(const struct config *c, const char *key, const char *sub);
+    s[n] = '\0';
 
-bool config_get_bool(const struct config *c, const char *key, bool sub);
+    return s;
+}
 
-int config_get_int(const struct config *c, const char *str, int sub);
+char *strconcat2(const char *s1, const char *s2)
+{
+    const char *args[] = {s1, s2};
 
-uint32_t config_get_u32(const struct config *c, const char *key, uint32_t sub);
+    return strconcat(args, 2);
+}
 
-double config_get_double(const struct config *c, const char *str, double sub);
+char *strnconcat(char *buf, size_t buf_size, const char **array, int size)
+{
+    size_t n = 0;
 
-#endif /* CONFIG_H_ */
+    for (int i = 0; i < size && n < buf_size; ++i) {
+        size_t len = strlen(array[i]);
+
+        if (n + len >= buf_size)
+            len = buf_size - n;
+
+        memcpy(buf + n, array[i], len);
+        n += len;
+    }
+
+    if (n >= buf_size)
+        n = buf_size - 1;
+
+    buf[n] = '\0';
+
+    return buf;
+}
+
+char *strnconcat2(char *buf, size_t buf_size, const char *s1, const char *s2)
+{
+    const char *args[] = {s1, s2};
+
+    return strnconcat(buf, buf_size, args, 2);
+}

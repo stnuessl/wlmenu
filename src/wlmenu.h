@@ -28,9 +28,9 @@
 #include <wayland-client.h>
 
 #include "config.h"
+#include "load.h"
 #include "widget.h"
 #include "xkb.h"
-#include "load.h"
 
 struct wlmenu {
     struct xkb xkb;
@@ -79,6 +79,7 @@ struct wlmenu {
     uint8_t show : 1;
     uint8_t released : 1;
     uint8_t dirty : 1;
+    uint8_t exec : 1;
 };
 
 void wlmenu_init(struct wlmenu *w, const char *display_name);
@@ -88,6 +89,8 @@ void wlmenu_destroy(struct wlmenu *w);
 void wlmenu_set_window_title(struct wlmenu *w, const char *title);
 
 void wlmenu_set_window_class(struct wlmenu *w, const char *name);
+
+void wlmenu_set_exec(struct wlmenu *w, bool exec);
 
 struct widget *wlmenu_widget(struct wlmenu *w);
 

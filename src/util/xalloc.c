@@ -25,8 +25,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "xalloc.h"
 #include "die.h"
+#include "xalloc.h"
 
 void *xmalloc(size_t n)
 {
@@ -63,4 +63,3 @@ char *xstrdup(const char *s)
 
     return dup;
 }
-

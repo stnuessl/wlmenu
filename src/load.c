@@ -36,6 +36,7 @@
 
 #include "util/die.h"
 #include "util/io.h"
+#include "util/string-util.h"
 #include "util/xalloc.h"
 
 #include "load.h"
@@ -264,7 +265,7 @@ do_cache_read(int fd, const char *path, struct item **items, size_t *size)
             return -EINVAL;
 
         (*items)[n].name = str;
-        (*items)[n].mlen= 0;
+        (*items)[n].mlen = 0;
 
         ++n;
     }
@@ -377,8 +378,8 @@ static void do_path_load(const char *path,
 
 static void load_from_stdin(struct item **items, size_t *size)
 {
-    char *data;
     size_t n = 0, n_max = 4096;
+    char *data;
 
     data = xmalloc(n_max);
 
@@ -424,8 +425,8 @@ static void load_from_stdin(struct item **items, size_t *size)
     while (data) {
         char *p;
         char *str = data;
-        data = strchr(data, '\n');
 
+        data = strchr(data, '\n');
         if (data)
             *data++ = '\0';
 
@@ -459,10 +460,9 @@ static void load_from_stdin(struct item **items, size_t *size)
 
 static void load_from_path(struct item **items, size_t *size)
 {
-    char *path, *cache;
-    size_t n;
     char *env_path = getenv("PATH");
     char *env_home = getenv("HOME");
+    char *path, *cache;
 
     if (!items)
         die("load(): Invalid argument\n");
@@ -475,11 +475,7 @@ static void load_from_path(struct item **items, size_t *size)
 
     path = strdupa(env_path);
 
-    n = strlen(env_home);
-    cache = alloca(n + sizeof("/.cache/wlmenu/cache"));
-
-    strcpy(cache, env_home);
-    strcpy(cache + n, "/.cache/wlmenu/cache");
+    strconcat2a(&cache, env_home, "/.cache/wlmenu/cache");
 
     do_path_load(path, cache, items, size);
 }

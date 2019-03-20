@@ -287,7 +287,7 @@ static void wlmenu_select_items(struct wlmenu *w)
     for (size_t i = 0; i < w->n; ++i) {
         int diff = len - w->items[i].mlen;
 
-        /* 
+        /*
          * Because this function is called for each added or removed character
          * only the items with a match length difference of +1 or -1 can
          * further match the input.
@@ -296,7 +296,7 @@ static void wlmenu_select_items(struct wlmenu *w)
             w->items[i].mlen = len;
         else if (diff == -1 && w->items[i].mlen > len)
             w->items[i].mlen = len;
-        
+
         /* If the item matches and there is still an empty row we display it */
         if (w->items[i].mlen == len && widget_has_empty_row(&w->widget))
             widget_insert_row(&w->widget, w->items[i].name);
@@ -311,6 +311,11 @@ __attribute__((noreturn)) static void wlmenu_launch_item(const struct wlmenu *w)
     file = widget_selected_item(&w->widget);
     if (!file)
         exit(EXIT_SUCCESS);
+
+    if (!w->exec) {
+        fprintf(stdout, "%s\n", file);
+        exit(EXIT_SUCCESS);
+    }
 
     args[0] = strdupa(file);
     args[1] = NULL;
@@ -832,6 +837,11 @@ void wlmenu_set_window_title(struct wlmenu *w, const char *title)
 void wlmenu_set_window_class(struct wlmenu *w, const char *name)
 {
     wl_shell_surface_set_class(w->shell_surface, name);
+}
+
+void wlmenu_set_exec(struct wlmenu *w, bool exec)
+{
+    w->exec = exec;
 }
 
 struct widget *wlmenu_widget(struct wlmenu *w)

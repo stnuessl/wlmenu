@@ -155,7 +155,7 @@ static void widget_draw_output(struct widget *w)
     int32_t width = w->output.width;
     int32_t height = w->row_height;
 
-    /* 
+    /*
      * Make sure the selected item is always within the array bounds and
      * that it selects an item if there is at least on item in the array.
      */

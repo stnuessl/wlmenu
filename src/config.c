@@ -34,6 +34,7 @@
 
 #include "util/die.h"
 #include "util/io.h"
+#include "util/string-util.h"
 #include "util/xalloc.h"
 
 #include "config.h"
@@ -487,9 +488,7 @@ static void config_do_load(struct config *c, const char *path)
         default:
             die("config: %s:%d: invalid character \"%c\" outside of any "
                 "section\n",
-                parser.path,
-                parser.line,
-                parser.cur[-1]);
+                parser.path, parser.line, parser.cur[-1]);
             break;
         }
     }
@@ -589,6 +588,28 @@ config_get_str(const struct config *c, const char *str, const char *sub)
         return sub;
 
     return c->entries[index].value;
+}
+
+bool config_get_bool(const struct config *c, const char *str, bool sub)
+{
+    char *value;
+    int index;
+
+    index = config_get_index(c, str);
+    if (index < 0)
+        return sub;
+
+    value = strdupa(c->entries[index].value);
+
+    strlower(value);
+
+    if (streq(value, "1") || streq(value, "y") || streq(value, "yes"))
+        return true;
+
+    if (streq(value, "0") || streq(value, "n") || streq(value, "no"))
+        return false;
+
+    return sub;
 }
 
 int config_get_int(const struct config *c, const char *str, int sub)

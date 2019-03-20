@@ -35,7 +35,9 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "util/array.h"
 #include "util/die.h"
+#include "util/string-util.h"
 
 #include "config.h"
 #include "load.h"
@@ -49,18 +51,28 @@
     (WLMENU_MAJOR_VERSION "." WLMENU_MINOR_VERSION "." WLMENU_PATCH_VERSION)
 
 static struct wlmenu wlmenu;
+static struct config conf;
 static struct item *list;
 static size_t size;
 
-static void help(void)
+__attribute__((noreturn)) static void help(void)
 {
-    fprintf(stdout,
-            "Usage: wlmenu [options]\n"
-            "Options:\n"
-            "--config, -c  [arg]  Use [arg] as the configuration file\n"
-            "                     instead of \"~/.config/wlmenu/config\".\n"
-            "--help, -h           Show this help message and exit.\n"
-            "--version, -v        Print the version information and exit.\n");
+    static const char usage[] = {
+        "Usage: wlmenu [options]\n"
+        "Options:\n"
+        "--config, -c  [arg]  Use [arg] as the configuration file\n"
+        "                     instead of \"~/.config/wlmenu/config\".\n"
+        "--help, -h           Show this help message and exit.\n"
+        "--version, -v        Print the version information and exit.\n"};
+
+    fprintf(stdout, "%s\n", usage);
+    exit(EXIT_SUCCESS);
+}
+
+__attribute__((noreturn)) static void version(void)
+{
+    fprintf(stdout, "wlmenu: v%s\n", WLMENU_VERSION);
+    exit(EXIT_SUCCESS);
 }
 
 static void *thr_load(void *arg)
@@ -72,43 +84,48 @@ static void *thr_load(void *arg)
     pthread_exit(NULL);
 }
 
+int get_config_path(char *buf, size_t size)
+{
+    char *home;
+
+    home = getenv("HOME");
+    if (!home)
+        return -ENOENT;
+
+    if (!strnconcat2(buf, size, home, "/.config/wlmenu/config"))
+        return -ENOMEM;
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
+    bool exec = false;
     struct timespec begin, end;
-    struct config conf;
-    char *path;
+    char path[256];
     pthread_t thread;
     uint64_t elapsed;
     int err;
 
-    path = getenv("HOME");
-    if (path) {
-        size_t len1 = strlen(path);
-        size_t len2 = sizeof("/.config/wlmenu/config");
-        char *s = alloca(len1 + len2);
-
-        memcpy(s, path, len1);
-        memcpy(s + len1, "/.config/wlmenu/config", len2);
-
-        path = s;
-    }
+    err = get_config_path(path, ARRAY_SIZE(path));
+    if (err < 0)
+        die_error(-err, "Failed to get path to configuration file");
 
     for (int i = 1; i < argc; ++i) {
+        char *arg = argv[i];
 
-        if (!strcmp(argv[i], "--config") || !strcmp(argv[i], "-c")) {
-            if (++i >= argc)
-                die("missing argument for option \"%s\"\n", argv[i - 1]);
-
-            path = argv[i];
-        } else if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h")) {
+        if (streq("--exec", arg) || streq("-e", arg))
+            exec = true;
+        else if (streq("--help", arg) || streq("--h", arg))
             help();
-            exit(EXIT_SUCCESS);
-        } else if (!strcmp(argv[i], "--version") || !strcmp(argv[i], "-v")) {
-            fprintf(stdout, "wlmenu: v%s\n", WLMENU_VERSION);
-            exit(EXIT_SUCCESS);
-        } else {
-            fprintf(stderr, "wlmenu: unknown argument \"%s\"\n", argv[i]);
-        }
+        else if (streq("--version", arg) || streq("-v", arg))
+            version();
+        else if (i + 1 >= argc)
+            die("missing argument for option \"%s\"\n", arg);
+        else if (streq("--config", arg) || streq("-c", arg))
+            strncpy(path, argv[++i], ARRAY_SIZE(path));
+        else
+            fprintf(stderr, "wlmenu: ignoring unknown option \"%s\"\n", arg);
     }
 
     (void) clock_gettime(CLOCK_MONOTONIC, &begin);
@@ -123,6 +140,7 @@ int main(int argc, char *argv[])
     wlmenu_init(&wlmenu, NULL);
     wlmenu_set_window_title(&wlmenu, "wlmenu");
     wlmenu_set_config(&wlmenu, &conf);
+    wlmenu_set_exec(&wlmenu, exec);
 
     wlmenu_show(&wlmenu);
 
