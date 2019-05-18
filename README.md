@@ -21,14 +21,23 @@ A simple and fast application launcher for wayland.
 
 ## Usage
 
-### Command-Line
-    $ wlmenu --help
+Start __wlmenu__ and start typing the name of the application you want to
+launch and press enter. The table below shows some key combinations which might
+be useful while using __wlmenu__.
+
+| Keys                   | Description                   |
+|------------------------|-------------------------------|
+| Enter                  | Start selected application.   |
+| Ctrl + w:              | Clear wlmenu input.           |
+| Arrow Up / Shift + Tab | Select previous entry.        |
+| Arrow Down / Tab       | Select next entry.            |
+| Escape                 | Exit wlmenu.                  |
 
 ### Configuration File
 
 The configuration file template below can be adjusted to your needs.
 If the file "~/.config/wlmenu/config" exists, wlmenu will automatically
-load its configuration from it.
+load it.
 
 ```
 #
@@ -68,3 +77,8 @@ font = /usr/share/fonts/TTF/Hack-Regular.ttf
 size = 16.0
 ```
 
+Additionaly, you can specify a configuration file in a different path with
+
+```
+$ wlmenu --config <path-to-config>
+```
